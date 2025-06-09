@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>国土地理院タイルで位置選択</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <style>
+    #map { height: 50vh; width: 100vw; margin-bottom: 1em; }
+  </style>
+</head>
+<body>
+  <h2>現場位置を選択（GSI日本語地図）</h2>
+  <div id="map"></div>
+  <p id="coords"></p>
+  <button id="useLocation">この位置を使う</button>
+
+  <form id="reportForm">
+    <input type="hidden" id="latitude" name="latitude">
+    <input type="hidden" id="longitude" name="longitude">
+    <!-- 他の入力欄もここに追加できます -->
+    <button type="submit">送信</button>
+  </form>
+
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    // 1. 地図の初期化
+    var initialLat = 35.681236, initialLng = 139.767125;
+    var map = L.map('map').setView([initialLat, initialLng], 16);
+
+    // 2. 国土地理院タイル（GSI）の設定
+    L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
+      attribution: "地理院タイル（GSI）",
+      maxZoom: 18,
+      minZoom: 5
+    }).addTo(map);
+
+    // 3. ピン設置・ドラッグ可能
+    var marker = L.marker([initialLat, initialLng], {draggable:true}).addTo(map);
+    function updateCoords(latlng) {
+      document.getElementById('coords').innerText =
+        '緯度: ' + latlng.lat.toFixed(6) + '　経度: ' + latlng.lng.toFixed(6);
+    }
+    marker.on('dragend', function() {
+      updateCoords(marker.getLatLng());
+    });
+    updateCoords(marker.getLatLng());
+
+    // 4. 現在地取得（位置情報許可時）
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(function(pos){
+        var lat = pos.coords.latitude, lng = pos.coords.longitude;
+        map.setView([lat, lng], 18);
+        marker.setLatLng([lat, lng]);
+        updateCoords({lat, lng});
+      });
+    }
+
+    // 5. 「この位置を使う」ボタンで座標をフォームにセット
+    document.getElementById('useLocation').onclick = function(){
+      var latlng = marker.getLatLng();
+      document.getElementById('latitude').value = latlng.lat;
+      document.getElementById('longitude').value = latlng.lng;
+      alert('この位置で登録します');
+    };
+
+    // 6. 送信処理（他情報と一緒にGAS等へPOST可能）
+    document.getElementById('reportForm').onsubmit = async function(e){
+      e.preventDefault();
+      alert(
+        "送信データ：\n緯度: " + document.getElementById('latitude').value +
+        "\n経度: " + document.getElementById('longitude').value
+      );
+      // ここにfetch送信やLIFF.closeWindow()など追加できます
+    };
+  </script>
+</body>
+</html>
+
