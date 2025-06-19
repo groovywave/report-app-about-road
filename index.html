@@ -1,233 +1,70 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>道路異状通報フォーム</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-  <style>
-    /* CSS部分は変更なしなので、前回のコードと同じ */
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin: 0; padding: 16px; background-color: #f0f2f5; }
-    .container { background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    h2 { color: #1d2129; border-bottom: 2px solid #00B900; padding-bottom: 10px; }
-    .form-group { margin-bottom: 20px; }
-    label { display: block; font-weight: bold; margin-bottom: 8px; color: #4b4f56; }
-    .radio-group label { display: inline-block; margin-right: 15px; font-weight: normal;}
-    input[type="text"], input[type="tel"], input[type="radio"], input[type="file"], textarea { margin-bottom: 5px; }
-    input[type="text"], input[type="tel"] { width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid #dddfe2; border-radius: 6px; font-size: 16px; }
-    textarea { width: 100%; box-sizing: border-box; height: 100px; padding: 10px; border: 1px solid #dddfe2; border-radius: 6px; font-size: 16px; }
-    button { display: block; width: 100%; padding: 12px; font-size: 18px; font-weight: bold; border: none; border-radius: 6px; color: white; cursor: pointer; }
-    #btn-submit { background-color: #00B900; margin-top: 10px;}
-    button:disabled { background-color: #a0a0a0; cursor: not-allowed; }
-    #map-wrapper { position: relative; border: 1px solid #ccc; border-radius: 6px; }
-    #map { height: 300px; width: 100%; border-radius: 6px; }
-    #center-pin { position: absolute; z-index: 1000; top: 50%; left: 50%; width: 25px; height: 41px; transform: translate(-50%, -100%); pointer-events: none; }
-    #coords-display { text-align: center; font-size: 12px; color: #555; padding: 4px; background: #f0f0f0; border-radius: 4px; margin-top: 5px;}
-    #image-preview { max-width: 100%; max-height: 200px; margin-top: 10px; border-radius: 6px; display: none; }
-    .loader-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.8); display: flex; justify-content: center; align-items: center; z-index: 9999; flex-direction: column; }
-    .loader { border: 8px solid #f3f3f3; border-top: 8px solid #00B900; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
-    .loader-text { margin-top: 20px; font-size: 18px; color: #333; }
-    .hidden { display: none; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>道路異状通報フォーム</title>
+<link rel="stylesheet" href="<https://unpkg.com/leaflet@1.7.1/dist/leaflet.css>" />
+<link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <!-- HTML部分は変更なしなので、前回のコードと同じ -->
-  <div id="loader" class="loader-overlay hidden">
+
+<!-- ローディング画面 -->
+<div id="loader" class="loader-overlay hidden">
     <div class="loader"></div>
     <p id="loader-text" class="loader-text">処理中です...</p>
-  </div>
-  <div class="container">
+</div>
+
+<!-- メインコンテンツ -->
+<div class="container">
     <form id="report-form">
-      <h2>道路の異状を通報</h2>
-      <div class="form-group">
-        <label>1. 異状の種類</label>
-        <div class="radio-group">
-          <input type="radio" id="type1" name="type" value="路面の穴ぼこ・段差" required><label for="type1">穴ぼこ・段差</label>
-          <input type="radio" id="type2" name="type" value="落下物・汚れ"><label for="type2">落下物・汚れ</label>
-          <input type="radio" id="type3" name="type" value="その他"><label for="type3">その他</label>
+        <h2>道路の異状を通報</h2>
+        <!-- フォームの各項目... (変更なし) -->
+        <div class="form-group">
+            <label>1. 異状の種類</label>
+            <div class="radio-group">
+                <input type="radio" id="type1" name="type" value="路面の穴ぼこ・段差" required><label for="type1">穴ぼこ・段差</label>
+                <input type="radio" id="type2" name="type" value="落下物・汚れ"><label for="type2">落下物・汚れ</label>
+                <input type="radio" id="type3" name="type" value="その他"><label for="type3">その他</label>
+            </div>
         </div>
-      </div>
-      <div class="form-group">
-        <label>2. 道路の種類</label>
-        <div class="radio-group">
-          <input type="radio" id="road1" name="roadType" value="一般道路" required><label for="road1">一般道路</label>
-          <input type="radio" id="road2" name="roadType" value="高速・有料道路"><label for="road2">高速・有料道路</label>
+        <div class="form-group">
+            <label>2. 道路の種類</label>
+            <div class="radio-group">
+                <input type="radio" id="road1" name="roadType" value="一般道路" required><label for="road1">一般道路</label>
+                <input type="radio" id="road2" name="roadType" value="高速・有料道路"><label for="road2">高速・有料道路</label>
+            </div>
         </div>
-      </div>
-      <div class="form-group">
-        <label for="photo">3. 現場の写真 (任意)</label>
-        <input type="file" id="photo" name="photo" accept="image/*">
-        <img id="image-preview" src="#" alt="写真プレビュー"/>
-      </div>
-      <div class="form-group">
-        <label>4. 異状のある場所</label>
-        <div id="map-wrapper">
-          <div id="map"></div>
-          <img id="center-pin" src="https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png" alt="center pin">
+        <div class="form-group">
+            <label for="photo">3. 現場の写真 (任意)</label>
+            <input type="file" id="photo" name="photo" accept="image/*">
+            <img id="image-preview" src="#" alt="写真プレビュー"/>
         </div>
-        <div id="coords-display">地図を動かして位置を合わせてください</div>
-        <input type="hidden" id="latitude" name="latitude" required>
-        <input type="hidden" id="longitude" name="longitude" required>
-      </div>
-      <div class="form-group">
-        <label for="name">5. ご連絡先 (任意)</label>
-        <input type="text" id="name" name="name" placeholder="氏名">
-        <input type="tel" id="contact" name="contact" placeholder="連絡先 (電話番号)">
-      </div>
-      <div class="form-group">
-        <label for="details">6. 詳しい状況 (任意)</label>
-        <textarea id="details" name="details" placeholder="例: 直径50cmほどの穴。夜間は特に危険。"></textarea>
-      </div>
-      <button type="submit" id="btn-submit">この内容で通報する</button>
+        <div class="form-group">
+            <label>4. 異状のある場所</label>
+            <div id="map-wrapper">
+                <div id="map"></div>
+                <img id="center-pin" src="<https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png>" alt="center pin">
+            </div>
+            <div id="coords-display">地図を動かして位置を合わせてください</div>
+            <input type="hidden" id="latitude" name="latitude" required>
+            <input type="hidden" id="longitude" name="longitude" required>
+        </div>
+        <div class="form-group">
+            <label for="name">5. ご連絡先 (任意)</label>
+            <input type="text" id="name" name="name" placeholder="氏名">
+            <input type="tel" id="contact" name="contact" placeholder="連絡先 (電話番号)">
+        </div>
+        <div class="form-group">
+            <label for="details">6. 詳しい状況 (任意)</label>
+            <textarea id="details" name="details" placeholder="例: 直径50cmほどの穴。夜間は特に危険。"></textarea>
+        </div>
+        <button type="submit" id="btn-submit">この内容で通報する</button>
     </form>
-  </div>
+</div>
 
-  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-  <script>
-    // --- ▼▼▼ 設定項目 ▼▼▼ ---
-    const liffId = "2007365296-akKropNd"; // ★★ あなたのLIFF IDをここに貼り付け ★★
-    const gasUrl = "https://a3bf8e0a.report-app-about-road.pages.dev/"; // ★★ あなたのGASウェブアプリのURLをここに貼り付け ★★
-    // --- ▲▲▲ 設定項目 ▲▲▲ ---
-    
-    // --- グローバル変数 ---
-    let map;
-    let base64Image = null;
-    let userProfile = null;
-
-    // --- DOM要素 ---
-    const form = document.getElementById('report-form');
-    const btnSubmit = document.getElementById('btn-submit');
-    const latInput = document.getElementById('latitude');
-    const lngInput = document.getElementById('longitude');
-    const coordsDisplay = document.getElementById('coords-display');
-    const photoInput = document.getElementById('photo');
-    const imagePreview = document.getElementById('image-preview');
-    const loader = document.getElementById('loader');
-
-    // ▼▼▼▼▼ JavaScriptロジックを全面的に改修 ▼▼▼▼▼
-
-    // 地図の初期化とイベント設定
-    function initializeMap() {
-        const initialLat = 35.681236, initialLng = 139.767125; // 初期位置: 東京駅
-        map = L.map('map').setView([initialLat, initialLng], 15);
-
-        // GSIタイルレイヤーを追加
-        L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
-            attribution: "<a href='https://maps.gsi.go.jp/development/ichiran.html' target='_blank'>地理院タイル</a>",
-            maxZoom: 18,
-            minZoom: 5
-        }).addTo(map);
-
-        // 地図が動くたびに中央の座標を更新
-        map.on('move', updateCenterCoords);
-        
-        // フォームに初期座標を設定
-        updateCenterCoords();
-
-        // LIFF経由で現在地を取得し、地図の中心を移動
-        if (liff.isInClient()) {
-            liff.getGeolocation().then(pos => {
-                map.setView([pos.coords.latitude, pos.coords.longitude], 17);
-            }).catch(err => {
-                console.warn('Geolocation failed:', err); // 取得失敗は警告に留める
-            });
-        }
-    }
-    
-    // 地図中央の座標をフォームと表示に反映させる関数
-    function updateCenterCoords() {
-        const center = map.getCenter();
-        const lat = center.lat.toFixed(6);
-        const lng = center.lng.toFixed(6);
-        latInput.value = lat;
-        lngInput.value = lng;
-        coordsDisplay.textContent = `緯度: ${lat}, 経度: ${lng}`;
-    }
-
-    // 画像ファイルが選択されたときの処理
-    photoInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          base64Image = e.target.result;
-          imagePreview.src = base64Image;
-          imagePreview.style.display = 'block';
-        };
-        reader.readAsDataURL(file);
-      }
-    });
-
-    // フォーム送信時の処理
-    form.addEventListener('submit', async function(e) {
-      e.preventDefault();
-      if (!form.checkValidity()) {
-        alert('必須項目（異状の種類、道路の種類、場所）を入力してください。');
-        form.reportValidity();
-        return;
-      }
-
-      loader.classList.remove('hidden');
-      btnSubmit.disabled = true;
-
-      const formData = new FormData(form);
-      const reportData = {
-        userId: userProfile ? userProfile.userId : 'unknown',
-        name: formData.get('name'),
-        contact: formData.get('contact'),
-        type: formData.get('type'),
-        roadType: formData.get('roadType'),
-        latitude: formData.get('latitude'),
-        longitude: formData.get('longitude'),
-        details: formData.get('details'),
-        image: base64Image
-      };
-
-      try {
-        const response = await fetch(gasUrl, {
-          method: 'POST',
-          mode: 'cors',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(reportData)
-        });
-        const result = await response.json();
-        if (result.status === 'success') {
-          alert('通報ありがとうございました。');
-          liff.closeWindow();
-        } else {
-          throw new Error(result.message || 'サーバーでエラーが発生しました。');
-        }
-      } catch (err) {
-        console.error('Submit failed', err);
-        alert(`送信に失敗しました。\n${err.message}`);
-      } finally {
-        loader.classList.add('hidden');
-        btnSubmit.disabled = false;
-      }
-    });
-
-    // アプリケーション全体の初期化（LIFF SDKの読み込み後）
-    async function main() {
-      try {
-        await liff.init({ liffId });
-        if (!liff.isLoggedIn()) {
-          liff.login();
-          return; // ログインリダイレクトがかかるのでここで処理を中断
-        }
-        userProfile = await liff.getProfile();
-        initializeMap(); // LIFFの初期化が完了してから地図を初期化
-      } catch (e) {
-        console.error('LIFF Initialization failed', e);
-        alert('アプリの起動に失敗しました。画面を再読み込みしてください。');
-      }
-    }
-
-    // 実行開始
-    main();
-
-    // ▲▲▲▲▲ JavaScriptロジックを全面的に改修 ▲▲▲▲▲
-
-  </script>
+<script src="<https://unpkg.com/leaflet@1.7.1/dist/leaflet.js>"></script>
+<script src="script.js"></script> <!-- JavaScriptを外部ファイルから読み込み -->
 </body>
 </html>
+

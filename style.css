@@ -1,0 +1,23 @@
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin: 0; padding: 16px; background-color: #f0f2f5; }
+.container { background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+h2 { color: #1d2129; border-bottom: 2px solid #00B900; padding-bottom: 10px; }
+.form-group { margin-bottom: 20px; }
+label { display: block; font-weight: bold; margin-bottom: 8px; color: #4b4f56; }
+.radio-group label { display: inline-block; margin-right: 15px; font-weight: normal;}
+input[type="text"], input[type="tel"], input[type="radio"], input[type="file"], textarea { margin-bottom: 5px; }
+input[type="text"], input[type="tel"] { width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid #dddfe2; border-radius: 6px; font-size: 16px; }
+textarea { width: 100%; box-sizing: border-box; height: 100px; padding: 10px; border: 1px solid #dddfe2; border-radius: 6px; font-size: 16px; }
+button { display: block; width: 100%; padding: 12px; font-size: 18px; font-weight: bold; border: none; border-radius: 6px; color: white; cursor: pointer; }
+#btn-submit { background-color: #00B900; margin-top: 10px;}
+button:disabled { background-color: #a0a0a0; cursor: not-allowed; }
+#map-wrapper { position: relative; border: 1px solid #ccc; border-radius: 6px; }
+#map { height: 300px; width: 100%; border-radius: 6px; }
+#center-pin { position: absolute; z-index: 1000; top: 50%; left: 50%; width: 25px; height: 41px; transform: translate(-50%, -100%); pointer-events: none; }
+#coords-display { text-align: center; font-size: 12px; color: #555; padding: 4px; background: #f0f0f0; border-radius: 4px; margin-top: 5px;}
+#image-preview { max-width: 100%; max-height: 200px; margin-top: 10px; border-radius: 6px; display: none; }
+.loader-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.8); display: flex; justify-content: center; align-items: center; z-index: 9999; flex-direction: column; }
+.loader { border: 8px solid #f3f3f3; border-top: 8px solid #00B900; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
+.loader-text { margin-top: 20px; font-size: 18px; color: #333; }
+.hidden { display: none; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
