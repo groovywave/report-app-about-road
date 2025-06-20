@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const imagePreview = document.getElementById('image-preview');
 
   // === 地図の初期化 ===
-  L.tileLayer('<https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png>', {
+  L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
     attribution: "地理院タイル（GSI）", maxZoom: 18,
   }).addTo(map);
 
