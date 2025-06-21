@@ -6,6 +6,7 @@
 <title>道路異状通報フォーム</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
 <link rel="stylesheet" href="style.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
 
@@ -44,7 +45,9 @@
             <label>4. 異状のある場所</label>
             <div id="map-wrapper">
                 <div id="map"></div>
-                <img id="center-pin" src="<https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png>" alt="center pin">
+                <!-- <img id="center-pin" src="<https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png>" alt="center pin"> -->
+                <i id="center-pin" class="fas fa-map-marker-alt"></i>
+                <!-- <img id="center-pin" src="<https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png>" alt="center pin"> -->
             </div>
             <div id="coords-display">地図を動かして位置を合わせてください</div>
             <input type="hidden" id="latitude" name="latitude" required>
