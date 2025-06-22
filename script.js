@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-  function sendDataToGAS(photoData, photoMimeType) {
+  async function sendDataToGAS(photoData, photoMimeType) {
     const formData = new FormData(form);
     const payload = {
       latitude: formData.get('latitude'),
@@ -80,7 +80,7 @@ document.addEventListener('DOMContentLoaded', function() {
       photoMimeType: photoMimeType,
     };
 
-    fetch(GAS_WEB_APP_URL, {
+    await fetch(GAS_WEB_APP_URL, {
       method: 'POST',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'text/plain', },
