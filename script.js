@@ -1,7 +1,7 @@
 // script.js
 
 // ▼▼▼【重要】あなたのGASウェブアプリのURLに書き換えてください ▼▼▼
-const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwObX3b23OcJdSBgcsPA8l5ersVuZ_1S3FUVxOFU9O4utviF-CeD1VZsZkr3Fw8U7YT7Q/exec';
+const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxzTse4hTejMlvGFPYPpRT_4NXjAoc7TaJr_5MOZOY4eebAJotrwf-wUxrWnwseDKTMqg/exec';
 // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
 document.addEventListener('DOMContentLoaded', function() {
