@@ -4,7 +4,7 @@
 const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxn3KukqglLoMFSdfcVPB8zmXL_n4DYRknSzW_C1W82FCKVJ623tUsXf_77OKZZfFCS4w/exec';
 // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', function() {
   // === 要素の取得 ===
   const map = L.map('map').setView([36.8711457540221, 140.01606029114237
   ], 16);
@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   // === 写真プレビュー ===
-  photoInput.addEventListener('change', function () {
+  photoInput.addEventListener('change', function() {
     if (this.files && this.files[0]) {
       const reader = new FileReader();
       reader.onload = e => {
@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   // === フォーム送信処理 ===
-  form.addEventListener('submit', function (e) {
+  form.addEventListener('submit', function(e) {
     e.preventDefault();
     loader.classList.remove('hidden');
 
@@ -73,7 +73,7 @@ document.addEventListener('DOMContentLoaded', function () {
       latitude: formData.get('latitude'),
       longitude: formData.get('longitude'),
       type: formData.get('type'),
-      roadType: formData.get('roadType'),
+      roadState: formData.get('roadState'),
       details: formData.get('details'),
       name: formData.get('name'),
       contact: formData.get('contact'),
