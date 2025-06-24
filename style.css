@@ -25,7 +25,8 @@ margin-bottom: 8px;
 color: #4b4f56; 
 }
 .radio-group label { 
-display: inline-block; 
+display: flex; 
+flex-direction: column;
 margin-right: 15px; 
 font-weight: normal;
 }
