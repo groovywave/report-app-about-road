@@ -73,10 +73,7 @@ document.addEventListener('DOMContentLoaded', function() {
       latitude: formData.get('latitude'),
       longitude: formData.get('longitude'),
       type: formData.get('type'),
-      roadState: formData.get('roadState'),
       details: formData.get('details'),
-      name: formData.get('name'),
-      contact: formData.get('contact'),
       photoData: photoData,
       photoMimeType: photoMimeType,
     };
