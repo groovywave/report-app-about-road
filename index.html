@@ -32,11 +32,8 @@
             </div>
         </div>
         <div class="form-group">
-            <label>2. 通行の状況</label>
-            <div class="radio-group">
-                <input type="radio" id="road1" name="roadState" value="通行に支障あり" required><label for="road1">一般道路</label>
-                <input type="radio" id="road2" name="roadState" value="通行に支障ない"><label for="road2">高速・有料道路</label>
-            </div>
+            <label for="details">2. 詳しい状況 (任意)</label>
+            <textarea id="details" name="details" placeholder="例: 直径50cmほどの穴。夜間は特に危険。"></textarea>
         </div>
         <div class="form-group">
             <label for="photo">3. 現場の写真 (任意)</label>
@@ -54,15 +51,6 @@
             <div id="coords-display">地図を動かして位置を合わせてください</div>
             <input type="hidden" id="latitude" name="latitude" required>
             <input type="hidden" id="longitude" name="longitude" required>
-        </div>
-        <div class="form-group">
-            <label for="name">5. ご連絡先 (任意)</label>
-            <input type="text" id="name" name="name" placeholder="氏名">
-            <input type="tel" id="contact" name="contact" placeholder="連絡先 (電話番号)">
-        </div>
-        <div class="form-group">
-            <label for="details">6. 詳しい状況 (任意)</label>
-            <textarea id="details" name="details" placeholder="例: 直径50cmほどの穴。夜間は特に危険。"></textarea>
         </div>
         <button type="submit" id="btn-submit">この内容で通報する</button>
     </form>
