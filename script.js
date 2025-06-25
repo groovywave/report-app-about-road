@@ -1,10 +1,10 @@
 // script.js
 
 // ▼▼▼【重要】あなたのGASウェブアプリのURLに書き換えてください ▼▼▼
-const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyltsN-oPgNbhcCmgbNMV6T4W4UugtxPHMalyoQIp8CSX5q1rO8D_vx46KVmKtKAxDXqg/exec';
+const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwlVF9Qnrsv4RutP3G7oFSkStxeEMpQAjwxRsXzcYXUUB8zpbLz1ic2wmV68mLzN9e9dQ/exec';
 // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', function() {
   // === 要素の取得 ===
   const map = L.map('map').setView([36.8711457540221, 140.01606029114237
   ], 16);
@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   // === 写真プレビュー ===
-  photoInput.addEventListener('change', function () {
+  photoInput.addEventListener('change', function() {
     if (this.files && this.files[0]) {
       const reader = new FileReader();
       reader.onload = e => {
@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   // === フォーム送信処理 ===
-  form.addEventListener('submit', function (e) {
+  form.addEventListener('submit', function(e) {
     e.preventDefault();
     loader.classList.remove('hidden');
 
