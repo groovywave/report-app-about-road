@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded', function() {
     await fetch(GAS_WEB_APP_URL, {
       method: 'POST',
       body: JSON.stringify(payload),
-      headers: { 'Content-Type': 'application/json', },
+      headers: { 'Content-Type': 'text/plain', },
     })
       .then(response => response.json())
       .then(data => {
