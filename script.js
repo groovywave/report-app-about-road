@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', function () {
     coordsDisplay.innerText = `緯度: ${center.lat.toFixed(6)} 経度: ${center.lng.toFixed(6)}`;
     latInput.value = center.lat;
     lngInput.value = center.lng;
+    console.log("updateCenterCoords called. Setting latitude:", latInput.value, "longitude:", lngInput.value);
   }
 
   map.on('move', updateCenterCoords);
