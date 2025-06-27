@@ -137,6 +137,11 @@ document.addEventListener('DOMContentLoaded', function () {
   function validateFormData() {
     const formData = new FormData(form);
 
+    // デバッグ用：実際の値を確認
+    console.log('緯度の値:', formData.get('latitude'));
+    console.log('経度の値:', formData.get('longitude'));
+    console.log('通報種別の値:', formData.get('type'));
+
     // 必須フィールドのチェック
     const requiredFields = [
       { name: 'latitude', label: '緯度' },
