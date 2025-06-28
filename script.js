@@ -138,8 +138,7 @@ document.addEventListener('DOMContentLoaded', function () {
   /**
    * フォームデータの検証
    */
-  function validateFormData(form) {
-    const formData = new FormData(form);
+  function validateFormData(formData) {
 
     // デバッグ用：実際の値を確認
     console.log('緯度の値:', formData.get('latitude'));
