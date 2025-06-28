@@ -121,7 +121,7 @@ document.addEventListener('DOMContentLoaded', function () {
       const photoData = await processPhotoData();
 
       // データ送信（リトライ機能付き）
-      const result = await sendDataWithRetry(photoData.data, photoData.mimeType);
+      const result = await sendDataWithRetry(formData, photoData.data, photoData.mimeType);
 
       // 成功処理
       handleSubmissionSuccess(result);
@@ -208,14 +208,12 @@ document.addEventListener('DOMContentLoaded', function () {
   /**
    * データ送信（リトライ機能付き）
    */
-  async function sendDataWithRetry(photoData, photoMimeType, attempt = 1) {
+  async function sendDataWithRetry(formData, photoData, photoMimeType, attempt = 1) {
     try {
-      const formData = new FormData(form);
       const payload = {
         latitude: formData.get('latitude'),
         longitude: formData.get('longitude'),
         type: formData.get('type'),
-        roadType: formData.get('roadType'),
         details: formData.get('details'),
         photoData: photoData,
         photoMimeType: photoMimeType,
@@ -267,7 +265,7 @@ document.addEventListener('DOMContentLoaded', function () {
         showNotification(`送信に失敗しました。${CONFIG.RETRY_DELAY / 1000}秒後に再試行します... (${attempt}/${CONFIG.MAX_RETRY_ATTEMPTS})`, 'warning');
 
         await new Promise(resolve => setTimeout(resolve, CONFIG.RETRY_DELAY));
-        return sendDataWithRetry(photoData, photoMimeType, attempt + 1);
+        return sendDataWithRetry(formData, photoData, photoMimeType, attempt + 1);
       }
 
       // 最終的な失敗
