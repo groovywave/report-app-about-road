@@ -106,7 +106,7 @@ document.addEventListener('DOMContentLoaded', function () {
   /**
    * フォーム送信の処理
    */
-  async function handleFormSubmission(formDaa) {
+  async function handleFormSubmission(formData) {
     try {
       // 送信状態の設定
       setSubmissionState(true);
