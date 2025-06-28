@@ -85,6 +85,7 @@ document.addEventListener('DOMContentLoaded', function () {
         imagePreview.style.display = 'none';
       }
       reader.readAsDataURL(file);
+      console.log(reader.readAsDataURL(file));
     }
   });
 
@@ -97,19 +98,21 @@ document.addEventListener('DOMContentLoaded', function () {
       return;
     }
 
-    handleFormSubmission();
+    const formData = new FormData(form);
+
+    handleFormSubmission(formData);
   });
 
   /**
    * フォーム送信の処理
    */
-  async function handleFormSubmission() {
+  async function handleFormSubmission(formDaa) {
     try {
       // 送信状態の設定
       setSubmissionState(true);
 
       // フォームデータの検証
-      const validationResult = validateFormData();
+      const validationResult = validateFormData(formData);
       if (!validationResult.isValid) {
         throw new Error(validationResult.message);
       }
@@ -135,7 +138,7 @@ document.addEventListener('DOMContentLoaded', function () {
   /**
    * フォームデータの検証
    */
-  function validateFormData() {
+  function validateFormData(form) {
     const formData = new FormData(form);
 
     // デバッグ用：実際の値を確認
