@@ -217,8 +217,6 @@ document.addEventListener('DOMContentLoaded', function () {
         type: formData.get('type'),
         roadType: formData.get('roadType'),
         details: formData.get('details'),
-        name: formData.get('name'),
-        contact: formData.get('contact'),
         photoData: photoData,
         photoMimeType: photoMimeType,
         timestamp: new Date().toISOString()
