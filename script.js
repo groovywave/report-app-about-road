@@ -20,9 +20,9 @@ let currentPhoto = {
 
 let videoStream = null;
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
   // === 要素の取得 ===
-  const map = L.map('map').setView([35.681236, 139.767125], 16);
+  const map = L.map('map').setView([36.871, 140.016], 16);
   const coordsDisplay = document.getElementById('coords-display');
   const latInput = document.getElementById('latitude');
   const lngInput = document.getElementById('longitude');
@@ -31,12 +31,12 @@ document.addEventListener('DOMContentLoaded', function() {
   const photoInput = document.getElementById('photo');
   const imagePreview = document.getElementById('image-preview');
 
-  const staarCameraButton = document.getElementById('start-camera-btn');
+  const startCameraButton = document.getElementById('start-camera-btn');
   const cameraModal = document.getElementById('camera-modal');
   const videoElement = document.getElementById('camera-stream');
-  const canavsElement = document.getElementById('camera-canvas');
+  const canvasElement = document.getElementById('camera-canvas');
   const captureButton = document.getElementById('capture-btn');
-  const cancdelButton = document.getElementById('cancel-camera-btn');
+  const cancelButton = document.getElementById('cancel-camera-btn');
   // === 地図の初期化 ===
   L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
     attribution: "地理院タイル（GSI）",
@@ -92,7 +92,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // === 写真プレビューと検証 ===
-  photoInput.addEventListener('change', function() {
+  photoInput.addEventListener('change', function () {
     if (this.files && this.files[0]) {
       const file = this.files[0];
 
@@ -176,7 +176,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   // === フォーム送信処理 ===
-  form.addEventListener('submit', function(e) {
+  form.addEventListener('submit', function (e) {
     e.preventDefault();
 
     // 二重送信防止
@@ -207,7 +207,7 @@ document.addEventListener('DOMContentLoaded', function() {
       //const photoData = await processPhotoData();
 
       // データ送信（リトライ機能付き）
-      const result = await sendDataWithRetry(formData, currentPhotoData.data, currentPhotoData.mimeType);
+      const result = await sendDataWithRetry(formData, currentPhoto.data, currentPhoto.mimeType);
 
       // 成功処理
       handleSubmissionSuccess(result);
@@ -233,14 +233,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 必須フィールドのチェック
     const requiredFields = [
-      { name: 'latitude', label: '緯度' },
-      { name: 'longitude', label: '経度' },
-      { name: 'type', label: '通報種別' }
+      { name: 'latitude', label: '場所' },
+      { name: 'longitude', label: '場所' },
+      { name: 'type', label: '異常の不具合' }
     ];
 
     for (const field of requiredFields) {
       const value = formData.get(field.name);
       if (!value || value.trim() === '') {
+        if (field.name.includes('itude')) {
+          return { isValid: false, message: '場所が指定されていません。地図を動かして位置を合わせてください。' };
+        }
         return {
           isValid: false,
           message: `${field.label}が入力されていません。`
@@ -379,6 +382,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // フォームのリセット
     form.reset();
     imagePreview.style.display = 'none';
+    updatePhoto(null, null);
 
     // 地図の中心座標を更新
     updateCenterCoords();
