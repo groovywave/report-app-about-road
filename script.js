@@ -20,7 +20,7 @@ let currentPhoto = {
 
 let videoStream = null;
 
-document.addEventListener('load', function () {
+window.addEventListener('load', function () {
   // === 要素の取得 ===
   const map = L.map('map').setView([36.871, 140.016], 16);
   const coordsDisplay = document.getElementById('coords-display');
