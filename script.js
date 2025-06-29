@@ -20,7 +20,7 @@ let currentPhoto = {
 
 let videoStream = null;
 
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('load', function () {
   // === 要素の取得 ===
   const map = L.map('map').setView([36.871, 140.016], 16);
   const coordsDisplay = document.getElementById('coords-display');
@@ -142,7 +142,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     try {
-      const constraints = { video: { facingMode: 'environment' } };
+      const constraints = { video: { facingMode: { ideal: 'environment' } } };
       videoStream = await navigator.mediaDevices.getUserMedia(constraints);
       videoElement.srcObject = videoStream;
       //成功したらモーダルを開く
@@ -163,7 +163,7 @@ document.addEventListener('DOMContentLoaded', function () {
       message = 'カメラへのアクセスが拒否されました。ファイル選択をお試しください。';
     } else if (err.name === 'NotFoundError' || err.name === `DeviceNotFoundError`) {
       message = '利用可能なカメラが見つかりませんでした。ファイル選択をお試しください。';
-    } else if (err.message === 'mediaDevices API not supported') {
+    } else if (err.message.includes('mediaDevices')) {
       message = '利用可能なカメラが見つかりませんでした。ファイル選択をお試しください。';
     }
 
