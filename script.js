@@ -103,27 +103,24 @@ document.addEventListener('DOMContentLoaded', function () {
       // ファイルサイズチェック
       if (file.size > CONFIG.MAX_FILE_SIZE) {
         showNotification('ファイルサイズが大きすぎます。5MB以下のファイルを選択してください。', 'error');
-        this.value = '';
-        imagePreview.style.display = 'none';
+        updatePhoto(null, null);
         return;
       }
 
       // ファイル形式チェック
       if (!CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) {
         showNotification('対応していないファイル形式です。JPEG、PNG、GIF、WebPファイルを選択してください。', 'error');
-        this.value = '';
-        imagePreview.style.display = 'none';
+        updatePhoto(null, null);
         return;
       }
 
       const reader = new FileReader();
       reader.onload = e => {
-        imagePreview.src = e.target.result;
-        imagePreview.style.display = 'block';
+        updatePhoto(e.target.result, file.type);
       }
       reader.onerror = () => {
         showNotification('ファイルの読み込みに失敗しました。', 'error');
-        imagePreview.style.display = 'none';
+        updatePhoto(null, null);
       }
       reader.readAsDataURL(file);
       console.log(reader.readAsDataURL(file));
@@ -162,7 +159,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     //エラーの種類に応じてユーザーへのメッセージを変える
     let message = 'カメラの起動に失敗しました。ファイル選択をお試しください。';
-    if (err.name === 'NotAlloweddError' || err.name === `PermissionDeniedError`) {
+    if (err.name === 'NotAllowedError' || err.name === `PermissionDeniedError`) {
       message = 'カメラへのアクセスが拒否されました。ファイル選択をお試しください。';
     } else if (err.name === 'NotFoundError' || err.name === `DeviceNotFoundError`) {
       message = '利用可能なカメラが見つかりませんでした。ファイル選択をお試しください。';
@@ -316,28 +313,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     return { isValid: true };
-  }
-
-  /**
-   * 写真データの処理
-   */
-  function processPhotoData() {
-    return new Promise((resolve, reject) => {
-      const file = photoInput.files[0];
-
-      if (!file) {
-        resolve({ data: null, mimeType: null });
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = () => resolve({
-        data: reader.result,
-        mimeType: file.type
-      });
-      reader.onerror = () => reject(new Error('写真の読み込みに失敗しました。'));
-      reader.readAsDataURL(file);
-    });
   }
 
   /**
