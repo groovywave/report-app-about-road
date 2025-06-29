@@ -147,7 +147,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     try {
-      const constraints = { video: { facingMode: { ideal: 'environment' } } };
+      // const constraints = { video: { facingMode: { ideal: 'environment' } } };
+      const constraints = { video: true };
       videoStream = await navigator.mediaDevices.getUserMedia(constraints);
       videoElement.srcObject = videoStream;
       //成功したらモーダルを開く
@@ -163,13 +164,13 @@ document.addEventListener('DOMContentLoaded', function () {
     console.error('カメラの起動に失敗:', err);
 
     //エラーの種類に応じてユーザーへのメッセージを変える
-    let message = 'カメラの起動に失敗しました。ファイル選択をお試しください。';
+    let message = 'カメラの起動に失敗しました。「ファイルを選択」ボタンを押してください。';
     if (err.name === 'NotAllowedError' || err.name === `PermissionDeniedError`) {
-      message = 'カメラへのアクセスが拒否されました。ファイル選択をお試しください。';
+      message = 'カメラへのアクセスが拒否されました。「ファイルを選択」ボタンを押してください。';
     } else if (err.name === 'NotFoundError' || err.name === `DeviceNotFoundError`) {
-      message = '利用可能なカメラが見つかりませんでした。ファイル選択をお試しください。';
+      message = '利用可能なカメラが見つかりませんでした。「ファイルを選択」ボタンを押してください。';
     } else if (err.message.includes('mediaDevices')) {
-      message = '利用可能なカメラが見つかりませんでした。ファイル選択をお試しください。';
+      message = '利用可能なカメラが見つかりませんでした。「ファイルを選択」ボタンを押してください。';
     }
 
     //エラー用のビューを表示
