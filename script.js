@@ -13,7 +13,14 @@ const CONFIG = {
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
 };
 
-document.addEventListener('DOMContentLoaded', function () {
+let currentPhoto = {
+  data: null,
+  mimeType: null,
+};
+
+let videoStream = null;
+
+document.addEventListener('DOMContentLoaded', function() {
   // === 要素の取得 ===
   const map = L.map('map').setView([35.681236, 139.767125], 16);
   const coordsDisplay = document.getElementById('coords-display');
@@ -24,6 +31,12 @@ document.addEventListener('DOMContentLoaded', function () {
   const photoInput = document.getElementById('photo');
   const imagePreview = document.getElementById('image-preview');
 
+  const staarCameraButton = document.getElementById('start-camera-btn');
+  const cameraModal = document.getElementById('camera-modal');
+  const videoElement = document.getElementById('camera-stream');
+  const canavsElement = document.getElementById('camera-canvas');
+  const captureButton = document.getElementById('capture-btn');
+  const cancdelButton = document.getElementById('cancel-camera-btn');
   // === 地図の初期化 ===
   L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
     attribution: "地理院タイル（GSI）",
@@ -54,8 +67,32 @@ document.addEventListener('DOMContentLoaded', function () {
     );
   }
 
+  // ▼▼▼【追加】写真データとプレビューを更新する共通関数 ▼▼▼
+  /**
+   * 写真データとプレビューを更新する
+   * @param {string | null} data - Base64データURL
+   * @param {string | null} mimeType - MIMEタイプ
+   */
+  function updatePhoto(data, mimeType) {
+    if (data && mimeType) {
+      currentPhoto.data = data;
+      currentPhoto.mimeType = mimeType;
+      imagePreview.src = data;
+      imagePreview.style.display = 'block'; // プレビューを表示
+      // ファイル選択の値をリセットし、カメラ撮影後に再度ファイル選択できるようにする
+      photoInput.value = '';
+    } else {
+      // データがない場合はリセット
+      currentPhoto.data = null;
+      currentPhoto.mimeType = null;
+      imagePreview.src = '#';
+      imagePreview.style.display = 'none'; // プレビューを非表示
+      photoInput.value = '';
+    }
+  }
+
   // === 写真プレビューと検証 ===
-  photoInput.addEventListener('change', function () {
+  photoInput.addEventListener('change', function() {
     if (this.files && this.files[0]) {
       const file = this.files[0];
 
@@ -89,8 +126,57 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
+  // ▼▼▼【追加】カメラ機能のイベントリスナー ▼▼▼
+  // 「カメラで撮影」ボタンの処理
+  startCameraButton.addEventListener('click', async () => {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      showNotification('お使いのブラウザはカメラ機能に対応していません。', 'error');
+      return;
+    }
+    try {
+      // 背面カメラを優先して要求
+      const constraints = { video: { facingMode: 'environment' } };
+      videoStream = await navigator.mediaDevices.getUserMedia(constraints);
+      videoElement.srcObject = videoStream;
+      cameraModal.classList.remove('hidden');
+    } catch (err) {
+      console.error("カメラの起動に失敗:", err);
+      showNotification('カメラの起動に失敗しました。カメラへのアクセスを許可してください。', 'error');
+    }
+  });
+
+  // カメラを停止する関数
+  function stopCamera() {
+    if (videoStream) {
+      videoStream.getTracks().forEach(track => track.stop());
+      videoStream = null;
+    }
+    videoElement.srcObject = null;
+    cameraModal.classList.add('hidden');
+  }
+
+  // 「キャンセル」ボタンの処理
+  cancelButton.addEventListener('click', stopCamera);
+
+  // 「撮影」ボタンの処理
+  captureButton.addEventListener('click', () => {
+    canvasElement.width = videoElement.videoWidth;
+    canvasElement.height = videoElement.videoHeight;
+    const context = canvasElement.getContext('2d');
+    context.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
+
+    const mimeType = 'image/jpeg';
+    const dataUrl = canvasElement.toDataURL(mimeType, 0.9); // 第2引数は品質(0-1)
+
+    // 共通関数で写真データを更新
+    updatePhoto(dataUrl, mimeType);
+
+    // カメラを停止してモーダルを閉じる
+    stopCamera();
+  });
+
   // === フォーム送信処理 ===
-  form.addEventListener('submit', function (e) {
+  form.addEventListener('submit', function(e) {
     e.preventDefault();
 
     // 二重送信防止
@@ -109,7 +195,7 @@ document.addEventListener('DOMContentLoaded', function () {
   async function handleFormSubmission(formData) {
     try {
       // 送信状態の設定
-      setSubmissionState(true);
+      setSubmissionState(true, '通報を送信中...');
 
       // フォームデータの検証
       const validationResult = validateFormData(formData);
@@ -118,10 +204,10 @@ document.addEventListener('DOMContentLoaded', function () {
       }
 
       // 写真データの処理
-      const photoData = await processPhotoData();
+      //const photoData = await processPhotoData();
 
       // データ送信（リトライ機能付き）
-      const result = await sendDataWithRetry(formData, photoData.data, photoData.mimeType);
+      const result = await sendDataWithRetry(formData, currentPhotoData.data, currentPhotoData.mimeType);
 
       // 成功処理
       handleSubmissionSuccess(result);
