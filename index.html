@@ -37,7 +37,20 @@
         </div>
         <div class="form-group">
             <label for="photo">3. 現場の写真 (任意)</label>
-            <input type="file" id="photo" name="photo" accept="image/*">
+            <!--写真操作をまとめるコンテナ-->
+            <div class="photo-controls">
+              <!--ファイル選択（ボタン風のデザインにするためlabelを使用-->
+              <label for="photo" class="button-like-input">
+                <i class="fas fa-file-image"></i>ファイル選択
+              </label>
+              <!--実際のファイル入力は非表示にする-->
+              <input type="file" id="photo" name="photo" accept="image/*" style="display: none;">
+
+              <!--カメラ起動ボタン-->
+              <button type="button" id="start-camera-btn" class="camera-button">
+                <i class="fas fa-camera"></i>カメラで撮影
+              </button>
+            </div>
             <img id="image-preview" src="#" alt="写真プレビュー"/>
         </div>
         <div class="form-group">
@@ -56,6 +69,23 @@
     </form>
 </div>
 
+<!-- ▼▼▼ ここから追加 (カメラ撮影用モーダル) ▼▼▼ -->
+<div id="camera-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <h2>カメラ撮影</h2>
+        <video id="camera-stream" playsinline autoplay></video>
+        <canvas id="camera-canvas" style="display: none;"></canvas>
+        <div class="modal-controls">
+            <button type="button" id="capture-btn" class="button-primary">
+                <i class="fas fa-camera-retro"></i> 撮影
+            </button>
+            <button type="button" id="cancel-camera-btn" class="button-secondary">
+                <i class="fas fa-times"></i> キャンセル
+            </button>
+        </div>
+    </div>
+</div>
+    
 <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
 <script src="script.js"></script> <!-- JavaScriptを外部ファイルから読み込み -->
 </body>
