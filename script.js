@@ -33,7 +33,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
   const startCameraButton = document.getElementById('start-camera-btn');
   const cameraModal = document.getElementById('camera-modal');
+  const videoWrapper = document.getElementById('video-wrapper');
   const videoElement = document.getElementById('camera-stream');
+  const cameraErrorView = document.getElementById('camera-error-view');
+  const cameraErrorText = document.getElementById('camera-error-text');
+  const retryCameraButton = document.getElementById('retry-camera-btn');
   const canvasElement = document.getElementById('camera-canvas');
   const captureButton = document.getElementById('capture-btn');
   const cancelButton = document.getElementById('cancel-camera-btn');
@@ -126,26 +130,57 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
-  // ▼▼▼【追加】カメラ機能のイベントリスナー ▼▼▼
-  // 「カメラで撮影」ボタンの処理
-  startCameraButton.addEventListener('click', async () => {
+  // ===カメラ撮影のロジック ===
+
+  // カメラ起動処理を独立した関数にまとめる
+  async function startCamera() {
+    //カメラ起動を試みる前に、ビューを正常状態にセット
+    videoWrapper.classList.remove('hidden');
+    cameraErrorView.classList.add('hidden');
+    captureButton.classList.remove('hidden');
+
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      showNotification('お使いのブラウザはカメラ機能に対応していません。', 'error');
+      handleCameraError(new Error('mediaDevices API not supported'));
       return;
     }
+
     try {
-      // 背面カメラを優先して要求
       const constraints = { video: { facingMode: 'environment' } };
       videoStream = await navigator.mediaDevices.getUserMedia(constraints);
       videoElement.srcObject = videoStream;
+      //成功したらモーダルを開く
       cameraModal.classList.remove('hidden');
     } catch (err) {
-      console.error("カメラの起動に失敗:", err);
-      showNotification('カメラの起動に失敗しました。カメラへのアクセスを許可してください。', 'error');
+      //エラーが発生したらエラー処理関数を呼ぶ
+      handleCameraError(err);
     }
-  });
+  }
 
-  // カメラを停止する関数
+  //カメラ起動エラーを処理する専用の関数
+  function handleCameraError(err) {
+    console.error('カメラの起動に失敗:', err);
+
+    //エラーの種類に応じてユーザーへのメッセージを変える
+    let message = 'カメラの起動に失敗しました。ファイル選択をお試しください。';
+    if (err.name === 'NotAlloweddError' || err.name === `PermissionDeniedError`) {
+      message = 'カメラへのアクセスが拒否されました。ファイル選択をお試しください。';
+    } else if (err.name === 'NotFoundError' || err.name === `DeviceNotFoundError`) {
+      message = '利用可能なカメラが見つかりませんでした。ファイル選択をお試しください。';
+    } else if (err.message === 'mediaDevices API not supported') {
+      message = '利用可能なカメラが見つかりませんでした。ファイル選択をお試しください。';
+    }
+
+    //エラー用のビューを表示
+    cameraErrorText.textContent = message;
+    videoWrapper.classList.add('hidden');
+    cameraErrorView.classList.remove('hidden');
+    captureButton.classList.add('hidden');
+
+    //エラーでもモーダルは表示する
+    cameraModal.classList.remove('hidden');
+  }
+
+  //カメラを停止し、ビューの状態をリセットする関数
   function stopCamera() {
     if (videoStream) {
       videoStream.getTracks().forEach(track => track.stop());
@@ -153,12 +188,27 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     videoElement.srcObject = null;
     cameraModal.classList.add('hidden');
+
+    //モーダルを閉じる際に、ビューの状態を次回のためにリセットする
+    setTimeout(() => {
+      videoWrapper.classList.remove('hidden');
+      cameraErrorView.classList.add('hidden');
+      captureButton.classList.remove('hidden');
+    }, 300);
   }
 
-  // 「キャンセル」ボタンの処理
+  // === イベントリスナー ===
+
+  //「カメラで撮影」ボタンが押されたらカメラを起動
+  startCameraButton.addEventListener('click', startCamera);
+
+  //「再試行」ボタンが押されたら、もう一度カメラを起動
+  retryCameraButton.addEventListener('click', startCamera);
+
+  //「キャンセル」ボタンが押されたらカメラを起動
   cancelButton.addEventListener('click', stopCamera);
 
-  // 「撮影」ボタンの処理
+  //「撮影」写真データの処理
   captureButton.addEventListener('click', () => {
     canvasElement.width = videoElement.videoWidth;
     canvasElement.height = videoElement.videoHeight;
@@ -166,12 +216,8 @@ document.addEventListener('DOMContentLoaded', function () {
     context.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
 
     const mimeType = 'image/jpeg';
-    const dataUrl = canvasElement.toDataURL(mimeType, 0.9); // 第2引数は品質(0-1)
-
-    // 共通関数で写真データを更新
+    const dataUrl = canvasElement.toDataURL(mimeType, 0.9);
     updatePhoto(dataUrl, mimeType);
-
-    // カメラを停止してモーダルを閉じる
     stopCamera();
   });
 
