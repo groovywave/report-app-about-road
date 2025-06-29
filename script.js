@@ -20,7 +20,7 @@ let currentPhoto = {
 
 let videoStream = null;
 
-window.addEventListener('load', function () {
+document.addEventListener('DOMContentLoaded', function () {
   // === 要素の取得 ===
   const map = L.map('map').setView([36.871, 140.016], 16);
   const coordsDisplay = document.getElementById('coords-display');
@@ -41,6 +41,11 @@ window.addEventListener('load', function () {
   const canvasElement = document.getElementById('camera-canvas');
   const captureButton = document.getElementById('capture-btn');
   const cancelButton = document.getElementById('cancel-camera-btn');
+
+  if (!startCameraButton) {
+    conosole.error('カメラで撮影ボタンは機能していません。');
+  }
+
   // === 地図の初期化 ===
   L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
     attribution: "地理院タイル（GSI）",

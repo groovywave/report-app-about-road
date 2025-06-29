@@ -18,9 +18,9 @@
 
 <!-- メインコンテンツ -->
 <div class="container">
-    <form id="report-form">
+    <form id="report-form" novalidate>
         <h2>道路の異状を通報</h2>
-        <!-- フォームの各項目... (変更なし) -->
+        
         <div class="form-group">
             <label>1. 異状の種類</label>
             <div class="radio-group">
@@ -31,63 +31,76 @@
                 <input type="radio" id="type5" name="type" value="その他"><label for="type5">その他</label><br>
             </div>
         </div>
+        
         <div class="form-group">
             <label for="details">2. 詳しい状況 (任意)</label>
             <textarea id="details" name="details" placeholder="例: 直径50cmほどの穴。"></textarea>
         </div>
+        
         <div class="form-group">
             <label for="photo">3. 現場の写真 (任意)</label>
-            <!--写真操作をまとめるコンテナ-->
             <div class="photo-controls">
-              <!--ファイル選択（ボタン風のデザインにするためlabelを使用-->
               <label for="photo" class="button-like-input">
-                <i class="fas fa-file-image"></i>ファイル選択
+                <i class="fas fa-file-image"></i> ファイルを選択
               </label>
-              <!--実際のファイル入力は非表示にする-->
               <input type="file" id="photo" name="photo" accept="image/*" style="display: none;">
-
-              <!--カメラ起動ボタン-->
               <button type="button" id="start-camera-btn" class="camera-button">
-                <i class="fas fa-camera"></i>カメラで撮影
+                <i class="fas fa-camera"></i> カメラで撮影
               </button>
             </div>
             <img id="image-preview" src="#" alt="写真プレビュー"/>
         </div>
+        
         <div class="form-group">
             <label>4. 異状のある場所</label>
             <div id="map-wrapper">
                 <div id="map"></div>
-                <!-- <img id="center-pin" src="<https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png>" alt="center pin"> -->
                 <i id="center-pin" class="fas fa-map-marker-alt"></i>
-                <!-- <img id="center-pin" src="<https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png>" alt="center pin"> -->
             </div>
             <div id="coords-display">地図を動かして位置を合わせてください</div>
             <input type="hidden" id="latitude" name="latitude" required>
             <input type="hidden" id="longitude" name="longitude" required>
         </div>
+        
         <button type="submit" id="btn-submit">この内容で通報する</button>
     </form>
 </div>
 
-<!-- ▼▼▼ ここから追加 (カメラ撮影用モーダル) ▼▼▼ -->
+<!-- ▼▼▼【ここから修正】カメラ撮影用モーダルの構造を更新 ▼▼▼ -->
 <div id="camera-modal" class="modal-overlay hidden">
     <div class="modal-content">
         <h2>カメラ撮影</h2>
-        <video id="camera-stream" playsinline autoplay></video>
-        <canvas id="camera-canvas" style="display: none;"></canvas>
+
+        <!-- 【正常時】カメラ映像を表示するビュー -->
+        <div id="video-wrapper">
+            <video id="camera-stream" playsinline autoplay></video>
+            <canvas id="camera-canvas" style="display: none;"></canvas>
+        </div>
+
+        <!-- 【エラー時】エラーメッセージと再試行ボタンを表示するビュー -->
+        <div id="camera-error-view" class="hidden">
+            <p id="camera-error-text"></p>
+            <button type="button" id="retry-camera-btn" class="button-primary">
+                <i class="fas fa-sync-alt"></i> 再試行
+            </button>
+        </div>
+
+        <!-- 操作ボタンエリア -->
         <div class="modal-controls">
+            <!-- 「撮影」ボタンは正常時のみ表示 -->
             <button type="button" id="capture-btn" class="button-primary">
                 <i class="fas fa-camera-retro"></i> 撮影
             </button>
+            <!-- 「キャンセル」ボタンは常に表示 -->
             <button type="button" id="cancel-camera-btn" class="button-secondary">
                 <i class="fas fa-times"></i> キャンセル
             </button>
         </div>
     </div>
 </div>
+<!-- ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ -->
     
 <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
 <script src="script.js"></script> <!-- JavaScriptを外部ファイルから読み込み -->
 </body>
 </html>
-

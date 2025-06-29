@@ -1,145 +1,283 @@
-body { 
-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
-margin: 0; 
-padding: 16px; 
-background-color: #f0f2f5; 
+/* === 基本スタイル === */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    margin: 0;
+    padding: 16px;
+    background-color: #f0f2f5;
+    color: #1d2129;
 }
-.container { 
-background-color: white; 
-padding: 20px; 
-border-radius: 8px; 
-box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+
+.container {
+    max-width: 680px;
+    margin: 0 auto;
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
-h2 { 
-color: #1d2129; 
-border-bottom: 2px solid #00B900; 
-padding-bottom: 10px; 
+
+h2 {
+    color: #1d2129;
+    border-bottom: 2px solid #4CAF50; /* 色を調整 */
+    padding-bottom: 10px;
+    margin-top: 0;
 }
-.form-group { 
-margin-bottom: 20px; 
+
+/* === フォーム要素 === */
+.form-group {
+    margin-bottom: 24px;
 }
-label { 
-display: block; 
-font-weight: bold; 
-margin-bottom: 8px; 
-color: #4b4f56; 
+
+label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: #4b4f56;
 }
-.radio-group label { 
-display: inline-block; 
-margin-right: 15px; 
-font-weight: normal;
+
+.radio-group label {
+    display: inline-flex; /* 中央揃えのため */
+    align-items: center;  /* 中央揃えのため */
+    margin-right: 15px;
+    font-weight: normal;
 }
-input[type="text"], input[type="tel"], input[type="radio"], input[type="file"], textarea { margin-bottom: 5px; }
-input[type="text"], input[type="tel"] { width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid #dddfe2; border-radius: 6px; font-size: 16px; }
-textarea { 
-width: 100%; 
-box-sizing: border-box; 
-height: 100px; 
-padding: 10px; 
-border: 1px solid #dddfe2; 
-border-radius: 6px; 
-font-size: 16px; 
+.radio-group input[type="radio"] {
+    margin-right: 5px;
 }
-button { 
-display: block; 
-width: 100%; 
-padding: 12px; 
-font-size: 18px; 
-font-weight: bold; 
-border: none; 
-border-radius: 6px; 
-color: white; 
-cursor: pointer; 
+
+textarea {
+    width: 100%;
+    box-sizing: border-box;
+    height: 100px;
+    padding: 10px;
+    border: 1px solid #dddfe2;
+    border-radius: 6px;
+    font-size: 16px;
+    resize: vertical; /* 上下のリサイズのみ許可 */
 }
-#btn-submit { 
-background-color: #00B900; 
-margin-top: 10px;
+
+/* === ボタン全般 === */
+button, .button-like-input {
+    display: inline-block;
+    padding: 12px 20px;
+    font-size: 16px;
+    font-weight: bold;
+    border: none;
+    border-radius: 6px;
+    color: white;
+    cursor: pointer;
+    text-align: center;
+    transition: background-color 0.2s;
 }
-button:disabled { 
-background-color: #a0a0a0; 
-cursor: not-allowed; 
+
+button:disabled {
+    background-color: #a0a0a0;
+    cursor: not-allowed;
+    opacity: 0.7;
 }
-#map-wrapper { 
-position: relative; 
-border: 1px solid #ccc; 
-border-radius: 6px; 
+
+#btn-submit {
+    width: 100%;
+    background-color: #4CAF50; /* 色を調整 */
+    margin-top: 10px;
 }
-#map { 
-height: 300px; 
-width: 100%; 
-border-radius: 6px; 
+#btn-submit:hover:not(:disabled) {
+    background-color: #45a049;
 }
-#center-pin { 
-position: absolute; 
-z-index: 1000; 
-top: 50%; 
-left: 50%; 
-width: 25px; 
-height: 41px; 
-transform: translate(-50%, -100%); 
-pointer-events: none; 
+
+/* ▼▼▼【追加】写真操作ボタンのスタイル ▼▼▼ */
+.photo-controls {
+    display: flex;
+    gap: 10px; /* ボタン間の隙間 */
+    align-items: center;
 }
-#coords-display { 
-text-align: center; 
-font-size: 12px; 
-color: #555; 
-padding: 4px; 
-background: #f0f0f0; 
-border-radius: 4px; 
-margin-top: 5px;
+
+/* ファイル選択をボタン風に見せる */
+.button-like-input {
+    background-color: #1877f2;
 }
-#image-preview { 
-max-width: 100%; 
-max-height: 200px; 
-margin-top: 10px; 
-border-radius: 6px; 
-display: none; 
+.button-like-input:hover {
+    background-color: #166fe5;
 }
-.loader-overlay { 
-position: fixed; 
-top: 0; 
-left: 0; 
-width: 100%; 
-height: 100%; 
-background: rgba(255, 255, 255, 0.8); 
-display: flex; 
-justify-content: center; 
-align-items: center; 
-z-index: 9999; 
-flex-direction: column; 
+
+/* カメラボタン */
+.camera-button {
+    background-color: #6c757d;
 }
-.loader { 
-border: 8px solid #f3f3f3; 
-border-top: 8px solid #00B900; 
-border-radius: 50%; 
-width: 50px; 
-height: 50px; 
-animation: spin 1s linear infinite; 
+.camera-button:hover {
+    background-color: #5a6268;
 }
-.loader-text { 
-margin-top: 20px; 
-font-size: 18px; 
-color: #333; 
+
+.photo-controls i {
+    margin-right: 8px;
 }
-.hidden { 
-display: none; 
+/* ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ */
+
+
+/* === 地図 === */
+#map-wrapper {
+    position: relative;
+    border: 1px solid #ccc;
+    border-radius: 6px;
 }
+
+#map {
+    height: 300px;
+    width: 100%;
+    border-radius: 6px;
+}
+
+/* 冗長な定義を統合 */
 #center-pin {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            z-index: 1000;
-            
-            /* アイコンのスタイル */
-            font-size: 3rem; /* サイズ */
-            color: #E63946;  /* 色 */
-            text-shadow: 1px 1px 3px rgba(0,0,0,0.4); /* 影 */
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    z-index: 1000;
+    font-size: 3rem;
+    color: #E63946;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.4);
+    transform: translate(-50%, -100%);
+    pointer-events: none;
+}
 
-            /* ピンの先端（下端中央）が地図の中心にくるように位置を調整 */
-            transform: translate(-50%, -100%);
-            
-            /* アイコンが地図の操作を邪魔しないようにする */
-            pointer-events: none;
-        }
-@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+#coords-display {
+    text-align: center;
+    font-size: 12px;
+    color: #555;
+    padding: 4px;
+    background: #f0f0f0;
+    border-radius: 4px;
+    margin-top: 5px;
+}
 
+#image-preview {
+    max-width: 100%;
+    max-height: 200px;
+    margin-top: 10px;
+    border-radius: 6px;
+    display: none;
+    border: 1px solid #ddd;
+}
+
+/* === ローダー === */
+.loader-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.85);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    flex-direction: column;
+}
+
+.loader {
+    border: 8px solid #f3f3f3;
+    border-top: 8px solid #4CAF50;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+}
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loader-text {
+    margin-top: 20px;
+    font-size: 18px;
+    color: #333;
+}
+
+.hidden {
+    display: none !important; /* 他のスタイルに上書きされないように */
+}
+
+
+/* ▼▼▼【追加】カメラモーダルのスタイル ▼▼▼ */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.75);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+
+.modal-content {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    max-width: 90vw;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.modal-content h2 {
+    border: none;
+}
+
+#camera-stream {
+    width: 100%;
+    max-width: 500px;
+    height: auto;
+    border-radius: 4px;
+    background-color: #000;
+}
+
+#camera-error-view {
+    padding: 20px;
+    text-align: center;
+    color: #E63946;
+}
+
+.modal-controls {
+    margin-top: 15px;
+    display: flex;
+    gap: 15px;
+}
+
+.modal-controls .button-primary { background-color: #4CAF50; }
+.modal-controls .button-secondary { background-color: #6c757d; }
+/* ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ */
+
+
+/* ▼▼▼【追加】通知メッセージのスタイル ▼▼▼ */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    border-radius: 4px;
+    color: white;
+    font-weight: bold;
+    z-index: 10000;
+    max-width: 300px;
+    word-wrap: break-word;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    animation: fadeInOut 5s forwards;
+}
+
+.notification-success { background-color: #10b981; }
+.notification-error { background-color: #ef4444; }
+.notification-warning { background-color: #f59e0b; }
+.notification-info { background-color: #3b82f6; }
+
+@keyframes fadeInOut {
+    0% { opacity: 0; transform: translateY(-20px); }
+    10% { opacity: 1; transform: translateY(0); }
+    90% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-20px); }
+}
+/* ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ */
