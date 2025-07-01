@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const cancelButton = document.getElementById('cancel-camera-btn');
 
   if (!startCameraButton) {
-    conosole.error('カメラで撮影ボタンは機能していません。');
+    console.error('カメラで撮影ボタンは機能していません。');
   }
 
   // === 地図の初期化 ===
