@@ -1,283 +1,599 @@
-/* === 基本スタイル === */
+/* style.css - 道路異状通報フォーム用スタイル */
+
+/* ===== 基本設定 ===== */
+* {
+  box-sizing: border-box;
+}
+
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    margin: 0;
-    padding: 16px;
-    background-color: #f0f2f5;
-    color: #1d2129;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  line-height: 1.6;
+  color: #333;
 }
 
+/* ===== コンテナ ===== */
 .container {
-    max-width: 680px;
-    margin: 0 auto;
-    background-color: white;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  max-width: 500px;
+  margin: 20px auto;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
 }
 
-h2 {
-    color: #1d2129;
-    border-bottom: 2px solid #4CAF50; /* 色を調整 */
-    padding-bottom: 10px;
-    margin-top: 0;
+/* ===== フォーム ===== */
+#report-form {
+  padding: 32px;
 }
 
-/* === フォーム要素 === */
+#report-form h2 {
+  text-align: center;
+  color: #333;
+  margin: 0 0 32px 0;
+  font-size: 28px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ===== フォームグループ ===== */
 .form-group {
-    margin-bottom: 24px;
+  margin-bottom: 28px;
 }
 
-label {
-    display: block;
-    font-weight: bold;
-    margin-bottom: 8px;
-    color: #4b4f56;
+.form-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #333;
+  font-size: 16px;
+}
+
+/* ===== ラジオボタン ===== */
+.radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.radio-group input[type="radio"] {
+  margin-right: 8px;
+  transform: scale(1.2);
+  accent-color: #4facfe;
 }
 
 .radio-group label {
-    display: inline-flex; /* 中央揃えのため */
-    align-items: center;  /* 中央揃えのため */
-    margin-right: 15px;
-    font-weight: normal;
-}
-.radio-group input[type="radio"] {
-    margin-right: 5px;
+  display: flex;
+  align-items: center;
+  font-weight: 400;
+  margin-bottom: 0;
+  padding: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 2px solid transparent;
 }
 
+.radio-group label:hover {
+  background-color: #f8f9fa;
+  border-color: #4facfe;
+}
+
+.radio-group input[type="radio"]:checked + label {
+  background-color: #e3f2fd;
+  border-color: #4facfe;
+  color: #1976d2;
+}
+
+/* ===== テキストエリア ===== */
 textarea {
-    width: 100%;
-    box-sizing: border-box;
-    height: 100px;
-    padding: 10px;
-    border: 1px solid #dddfe2;
-    border-radius: 6px;
-    font-size: 16px;
-    resize: vertical; /* 上下のリサイズのみ許可 */
+  width: 100%;
+  min-height: 100px;
+  padding: 16px;
+  border: 2px solid #e9ecef;
+  border-radius: 12px;
+  font-size: 16px;
+  font-family: inherit;
+  resize: vertical;
+  transition: border-color 0.2s ease;
 }
 
-/* === ボタン全般 === */
-button, .button-like-input {
-    display: inline-block;
-    padding: 12px 20px;
-    font-size: 16px;
-    font-weight: bold;
-    border: none;
-    border-radius: 6px;
-    color: white;
-    cursor: pointer;
-    text-align: center;
-    transition: background-color 0.2s;
+textarea:focus {
+  outline: none;
+  border-color: #4facfe;
+  box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
 }
 
-button:disabled {
-    background-color: #a0a0a0;
-    cursor: not-allowed;
-    opacity: 0.7;
+textarea::placeholder {
+  color: #999;
 }
 
-#btn-submit {
-    width: 100%;
-    background-color: #4CAF50; /* 色を調整 */
-    margin-top: 10px;
-}
-#btn-submit:hover:not(:disabled) {
-    background-color: #45a049;
-}
-
-/* ▼▼▼【追加】写真操作ボタンのスタイル ▼▼▼ */
+/* ===== 写真コントロール ===== */
 .photo-controls {
-    display: flex;
-    gap: 10px; /* ボタン間の隙間 */
-    align-items: center;
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
 }
 
-/* ファイル選択をボタン風に見せる */
 .button-like-input {
-    background-color: #1877f2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 20px;
+  background-color: #f8f9fa;
+  border: 2px solid #e9ecef;
+  border-radius: 12px;
+  color: #666;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  font-size: 14px;
+  min-width: 140px;
 }
+
 .button-like-input:hover {
-    background-color: #166fe5;
+  background-color: #e9ecef;
+  border-color: #dee2e6;
+  color: #495057;
 }
 
-/* カメラボタン */
+.button-like-input i {
+  margin-right: 8px;
+  font-size: 16px;
+}
+
 .camera-button {
-    background-color: #6c757d;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  border: none;
+  border-radius: 12px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  font-size: 14px;
+  min-width: 140px;
+  box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
 }
+
 .camera-button:hover {
-    background-color: #5a6268;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(79, 172, 254, 0.4);
 }
 
-.photo-controls i {
-    margin-right: 8px;
+.camera-button:active {
+  transform: translateY(0);
 }
-/* ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ */
 
+.camera-button i {
+  margin-right: 8px;
+  font-size: 16px;
+}
 
-/* === 地図 === */
+/* ===== 画像プレビュー ===== */
+#image-preview {
+  display: none;
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  margin-top: 16px;
+}
+
+/* ===== 地図関連 ===== */
 #map-wrapper {
-    position: relative;
-    border: 1px solid #ccc;
-    border-radius: 6px;
+  position: relative;
+  height: 300px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  margin-bottom: 12px;
 }
 
 #map {
-    height: 300px;
-    width: 100%;
-    border-radius: 6px;
+  height: 100%;
+  width: 100%;
 }
 
-/* 冗長な定義を統合 */
 #center-pin {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    z-index: 1000;
-    font-size: 3rem;
-    color: #E63946;
-    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.4);
-    transform: translate(-50%, -100%);
-    pointer-events: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -100%);
+  font-size: 32px;
+  color: #e74c3c;
+  z-index: 1000;
+  pointer-events: none;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 #coords-display {
-    text-align: center;
-    font-size: 12px;
-    color: #555;
-    padding: 4px;
-    background: #f0f0f0;
-    border-radius: 4px;
-    margin-top: 5px;
+  background-color: #f8f9fa;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #666;
+  text-align: center;
+  border: 1px solid #e9ecef;
 }
 
-#image-preview {
-    max-width: 100%;
-    max-height: 200px;
-    margin-top: 10px;
-    border-radius: 6px;
-    display: none;
-    border: 1px solid #ddd;
+/* ===== 送信ボタン ===== */
+#btn-submit {
+  width: 100%;
+  padding: 18px;
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+  margin-top: 16px;
 }
 
-/* === ローダー === */
-.loader-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(255, 255, 255, 0.85);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
-    flex-direction: column;
+#btn-submit:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
 }
 
-.loader {
-    border: 8px solid #f3f3f3;
-    border-top: 8px solid #4CAF50;
-    border-radius: 50%;
-    width: 50px;
-    height: 50px;
-    animation: spin 1s linear infinite;
-}
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+#btn-submit:active {
+  transform: translateY(0);
 }
 
-.loader-text {
-    margin-top: 20px;
-    font-size: 18px;
-    color: #333;
+#btn-submit:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
-.hidden {
-    display: none !important; /* 他のスタイルに上書きされないように */
-}
-
-
-/* ▼▼▼【追加】カメラモーダルのスタイル ▼▼▼ */
+/* ===== モーダル ===== */
 .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.75);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 2000;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  backdrop-filter: blur(5px);
 }
 
 .modal-content {
-    background-color: #fff;
-    padding: 20px;
-    border-radius: 8px;
-    max-width: 90vw;
-    max-height: 90vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  background: white;
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  position: relative;
 }
 
 .modal-content h2 {
-    border: none;
+  text-align: center;
+  margin: 0 0 24px 0;
+  color: #333;
+  font-size: 24px;
+}
+
+/* ===== カメラビュー ===== */
+#video-wrapper {
+  text-align: center;
+  margin-bottom: 24px;
 }
 
 #camera-stream {
-    width: 100%;
-    max-width: 500px;
-    height: auto;
-    border-radius: 4px;
-    background-color: #000;
+  width: 100%;
+  max-width: 400px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 #camera-error-view {
-    padding: 20px;
-    text-align: center;
-    color: #E63946;
+  text-align: center;
+  padding: 32px;
+  color: #666;
 }
 
+#camera-error-view p {
+  margin-bottom: 24px;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+/* ===== モーダルコントロール ===== */
 .modal-controls {
-    margin-top: 15px;
-    display: flex;
-    gap: 15px;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
 }
 
-.modal-controls .button-primary { background-color: #4CAF50; }
-.modal-controls .button-secondary { background-color: #6c757d; }
-/* ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ */
+.button-primary {
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 120px;
+  box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+}
 
+.button-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(79, 172, 254, 0.4);
+}
 
-/* ▼▼▼【追加】通知メッセージのスタイル ▼▼▼ */
+.button-primary i {
+  margin-right: 8px;
+}
+
+.button-secondary {
+  padding: 12px 24px;
+  background-color: #f8f9fa;
+  color: #666;
+  border: 2px solid #e9ecef;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 120px;
+}
+
+.button-secondary:hover {
+  background-color: #e9ecef;
+  border-color: #dee2e6;
+}
+
+.button-secondary i {
+  margin-right: 8px;
+}
+
+/* ===== ローディング ===== */
+.loader-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 10001;
+  backdrop-filter: blur(5px);
+}
+
+.loader {
+  width: 50px;
+  height: 50px;
+  border: 5px solid #f3f3f3;
+  border-top: 5px solid #4facfe;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loader-text {
+  color: white;
+  font-size: 18px;
+  font-weight: 500;
+  text-align: center;
+}
+
+/* ===== ユーティリティクラス ===== */
+.hidden {
+  display: none !important;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.mb-0 {
+  margin-bottom: 0 !important;
+}
+
+.mt-16 {
+  margin-top: 16px;
+}
+
+/* ===== 通知スタイル ===== */
 .notification {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 12px 20px;
-    border-radius: 4px;
-    color: white;
-    font-weight: bold;
-    z-index: 10000;
-    max-width: 300px;
-    word-wrap: break-word;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    animation: fadeInOut 5s forwards;
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 16px 24px;
+  border-radius: 12px;
+  color: white;
+  font-weight: 600;
+  z-index: 10002;
+  max-width: 350px;
+  word-wrap: break-word;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
+  animation: slideIn 0.3s ease-out;
 }
 
-.notification-success { background-color: #10b981; }
-.notification-error { background-color: #ef4444; }
-.notification-warning { background-color: #f59e0b; }
-.notification-info { background-color: #3b82f6; }
-
-@keyframes fadeInOut {
-    0% { opacity: 0; transform: translateY(-20px); }
-    10% { opacity: 1; transform: translateY(0); }
-    90% { opacity: 1; transform: translateY(0); }
-    100% { opacity: 0; transform: translateY(-20px); }
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
-/* ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ */
+
+.notification-success {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+}
+
+.notification-error {
+  background: linear-gradient(135deg, #dc3545 0%, #e74c3c 100%);
+}
+
+.notification-warning {
+  background: linear-gradient(135deg, #ffc107 0%, #ff8c00 100%);
+}
+
+.notification-info {
+  background: linear-gradient(135deg, #17a2b8 0%, #007bff 100%);
+}
+
+/* ===== レスポンシブデザイン ===== */
+@media (max-width: 768px) {
+  .container {
+    margin: 10px;
+    border-radius: 12px;
+  }
+  
+  #report-form {
+    padding: 24px;
+  }
+  
+  #report-form h2 {
+    font-size: 24px;
+    margin-bottom: 24px;
+  }
+  
+  .photo-controls {
+    flex-direction: column;
+  }
+  
+  .button-like-input,
+  .camera-button {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  #map-wrapper {
+    height: 250px;
+  }
+  
+  .modal-content {
+    padding: 24px;
+    margin: 20px;
+  }
+  
+  .modal-controls {
+    flex-direction: column;
+  }
+  
+  .button-primary,
+  .button-secondary {
+    width: 100%;
+  }
+  
+  .notification {
+    right: 10px;
+    left: 10px;
+    max-width: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    margin: 5px;
+  }
+  
+  #report-form {
+    padding: 20px;
+  }
+  
+  #report-form h2 {
+    font-size: 20px;
+  }
+  
+  .form-group label {
+    font-size: 14px;
+  }
+  
+  textarea {
+    font-size: 14px;
+    padding: 12px;
+  }
+  
+  #btn-submit {
+    font-size: 16px;
+    padding: 16px;
+  }
+  
+  #map-wrapper {
+    height: 200px;
+  }
+  
+  #center-pin {
+    font-size: 24px;
+  }
+}
+
+/* ===== アクセシビリティ ===== */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* フォーカス表示の改善 */
+button:focus,
+input:focus,
+textarea:focus,
+label:focus {
+  outline: 2px solid #4facfe;
+  outline-offset: 2px;
+}
+
+/* ハイコントラストモード対応 */
+@media (prefers-contrast: high) {
+  .container {
+    border: 2px solid #000;
+  }
+  
+  button {
+    border: 2px solid #000;
+  }
+  
+  input, textarea {
+    border: 2px solid #000;
+  }
+}
+
+

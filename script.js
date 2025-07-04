@@ -1,516 +1,599 @@
-// script.js
+/* style.css - 道路異状通報フォーム用スタイル */
 
-// ▼▼▼【重要】あなたのGASウェブアプリのURLに書き換えてください ▼▼▼
-const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbztmV9q0Q6Af2k4rBPKocEQn8pWJSb7GwlDrcmWz73k23aaVwMaDsbWiJXe3HriFG03JQ/exec';
-// ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+/* ===== 基本設定 ===== */
+* {
+  box- sizing: border - box;
+}
 
-// 設定
-const CONFIG = {
-  MAX_RETRY_ATTEMPTS: 3,
-  RETRY_DELAY: 1000, // 1秒
-  REQUEST_TIMEOUT: 30000, // 30秒
-  MAX_FILE_SIZE: 5 * 1024 * 1024, // 5MB
-  ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-};
+body {
+  font - family: -apple - system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans - serif;
+  margin: 0;
+  padding: 0;
+  background: linear - gradient(135deg, #667eea 0 %, #764ba2 100 %);
+  min - height: 100vh;
+  line - height: 1.6;
+  color: #333;
+}
 
-let currentPhoto = {
-  data: null,
-  mimeType: null,
-};
+/* ===== コンテナ ===== */
+.container {
+  max - width: 500px;
+  margin: 20px auto;
+  background: white;
+  border - radius: 16px;
+  box - shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
 
-let videoStream = null;
+/* ===== フォーム ===== */
+#report - form {
+  padding: 32px;
+}
 
-document.addEventListener('DOMContentLoaded', function () {
-  // === 要素の取得 ===
-  const map = L.map('map').setView([36.871, 140.016], 16);
-  const coordsDisplay = document.getElementById('coords-display');
-  const latInput = document.getElementById('latitude');
-  const lngInput = document.getElementById('longitude');
-  const form = document.getElementById('report-form');
-  const loader = document.getElementById('loader');
-  const photoInput = document.getElementById('photo');
-  const imagePreview = document.getElementById('image-preview');
+#report - form h2 {
+  text - align: center;
+  color: #333;
+  margin: 0 0 32px 0;
+  font - size: 28px;
+  font - weight: 700;
+  background: linear - gradient(135deg, #4facfe 0 %, #00f2fe 100 %);
+  -webkit - background - clip: text;
+  -webkit - text - fill - color: transparent;
+  background - clip: text;
+}
 
-  const startCameraButton = document.getElementById('start-camera-btn');
-  const cameraModal = document.getElementById('camera-modal');
-  const videoWrapper = document.getElementById('video-wrapper');
-  const videoElement = document.getElementById('camera-stream');
-  const cameraErrorView = document.getElementById('camera-error-view');
-  const cameraErrorText = document.getElementById('camera-error-text');
-  const retryCameraButton = document.getElementById('retry-camera-btn');
-  const canvasElement = document.getElementById('camera-canvas');
-  const captureButton = document.getElementById('capture-btn');
-  const cancelButton = document.getElementById('cancel-camera-btn');
+/* ===== フォームグループ ===== */
+.form - group {
+  margin - bottom: 28px;
+}
 
-  if (!startCameraButton) {
-    console.error('カメラで撮影ボタンは機能していません。');
+.form - group label {
+  display: block;
+  font - weight: 600;
+  margin - bottom: 12px;
+  color: #333;
+  font - size: 16px;
+}
+
+/* ===== ラジオボタン ===== */
+.radio - group {
+  display: flex;
+  flex - direction: column;
+  gap: 12px;
+}
+
+.radio - group input[type = "radio"] {
+  margin - right: 8px;
+  transform: scale(1.2);
+  accent - color: #4facfe;
+}
+
+.radio - group label {
+  display: flex;
+  align - items: center;
+  font - weight: 400;
+  margin - bottom: 0;
+  padding: 12px;
+  border - radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 2px solid transparent;
+}
+
+.radio - group label:hover {
+  background - color: #f8f9fa;
+  border - color: #4facfe;
+}
+
+.radio - group input[type = "radio"]: checked + label {
+  background - color: #e3f2fd;
+  border - color: #4facfe;
+  color: #1976d2;
+}
+
+/* ===== テキストエリア ===== */
+textarea {
+  width: 100 %;
+  min - height: 100px;
+  padding: 16px;
+  border: 2px solid #e9ecef;
+  border - radius: 12px;
+  font - size: 16px;
+  font - family: inherit;
+  resize: vertical;
+  transition: border - color 0.2s ease;
+}
+
+textarea:focus {
+  outline: none;
+  border - color: #4facfe;
+  box - shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
+}
+
+textarea::placeholder {
+  color: #999;
+}
+
+/* ===== 写真コントロール ===== */
+.photo - controls {
+  display: flex;
+  gap: 12px;
+  margin - bottom: 16px;
+  flex - wrap: wrap;
+}
+
+.button - like - input {
+  display: inline - flex;
+  align - items: center;
+  justify - content: center;
+  padding: 12px 20px;
+  background - color: #f8f9fa;
+  border: 2px solid #e9ecef;
+  border - radius: 12px;
+  color: #666;
+  text - decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font - weight: 500;
+  font - size: 14px;
+  min - width: 140px;
+}
+
+.button - like - input:hover {
+  background - color: #e9ecef;
+  border - color: #dee2e6;
+  color: #495057;
+}
+
+.button - like - input i {
+  margin - right: 8px;
+  font - size: 16px;
+}
+
+.camera - button {
+  display: inline - flex;
+  align - items: center;
+  justify - content: center;
+  padding: 12px 20px;
+  background: linear - gradient(135deg, #4facfe 0 %, #00f2fe 100 %);
+  border: none;
+  border - radius: 12px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font - weight: 500;
+  font - size: 14px;
+  min - width: 140px;
+  box - shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+}
+
+.camera - button:hover {
+  transform: translateY(-2px);
+  box - shadow: 0 6px 20px rgba(79, 172, 254, 0.4);
+}
+
+.camera - button:active {
+  transform: translateY(0);
+}
+
+.camera - button i {
+  margin - right: 8px;
+  font - size: 16px;
+}
+
+/* ===== 画像プレビュー ===== */
+#image - preview {
+  display: none;
+  max - width: 100 %;
+  max - height: 300px;
+  border - radius: 12px;
+  box - shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  margin - top: 16px;
+}
+
+/* ===== 地図関連 ===== */
+#map - wrapper {
+  position: relative;
+  height: 300px;
+  border - radius: 12px;
+  overflow: hidden;
+  box - shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  margin - bottom: 12px;
+}
+
+#map {
+  height: 100 %;
+  width: 100 %;
+}
+
+#center - pin {
+  position: absolute;
+  top: 50 %;
+  left: 50 %;
+  transform: translate(-50 %, -100 %);
+  font - size: 32px;
+  color: #e74c3c;
+  z - index: 1000;
+  pointer - events: none;
+  text - shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+#coords - display {
+  background - color: #f8f9fa;
+  padding: 12px;
+  border - radius: 8px;
+  font - size: 14px;
+  color: #666;
+  text - align: center;
+  border: 1px solid #e9ecef;
+}
+
+/* ===== 送信ボタン ===== */
+#btn - submit {
+  width: 100 %;
+  padding: 18px;
+  background: linear - gradient(135deg, #28a745 0 %, #20c997 100 %);
+  color: white;
+  border: none;
+  border - radius: 12px;
+  font - size: 18px;
+  font - weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box - shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+  margin - top: 16px;
+}
+
+#btn - submit: hover: not(: disabled) {
+  transform: translateY(-2px);
+  box - shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+}
+
+#btn - submit:active {
+  transform: translateY(0);
+}
+
+#btn - submit:disabled {
+  background: #ccc;
+  cursor: not - allowed;
+  transform: none;
+  box - shadow: none;
+}
+
+/* ===== モーダル ===== */
+.modal - overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100 %;
+  height: 100 %;
+  background - color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify - content: center;
+  align - items: center;
+  z - index: 10000;
+  backdrop - filter: blur(5px);
+}
+
+.modal - content {
+  background: white;
+  border - radius: 16px;
+  padding: 32px;
+  max - width: 90vw;
+  max - height: 90vh;
+  overflow - y: auto;
+  box - shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  position: relative;
+}
+
+.modal - content h2 {
+  text - align: center;
+  margin: 0 0 24px 0;
+  color: #333;
+  font - size: 24px;
+}
+
+/* ===== カメラビュー ===== */
+#video - wrapper {
+  text - align: center;
+  margin - bottom: 24px;
+}
+
+#camera - stream {
+  width: 100 %;
+  max - width: 400px;
+  border - radius: 12px;
+  box - shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+#camera - error - view {
+  text - align: center;
+  padding: 32px;
+  color: #666;
+}
+
+#camera - error - view p {
+  margin - bottom: 24px;
+  font - size: 16px;
+  line - height: 1.5;
+}
+
+/* ===== モーダルコントロール ===== */
+.modal - controls {
+  display: flex;
+  gap: 12px;
+  justify - content: center;
+  flex - wrap: wrap;
+}
+
+.button - primary {
+  padding: 12px 24px;
+  background: linear - gradient(135deg, #4facfe 0 %, #00f2fe 100 %);
+  color: white;
+  border: none;
+  border - radius: 12px;
+  font - size: 16px;
+  font - weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline - flex;
+  align - items: center;
+  justify - content: center;
+  min - width: 120px;
+  box - shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+}
+
+.button - primary:hover {
+  transform: translateY(-2px);
+  box - shadow: 0 6px 20px rgba(79, 172, 254, 0.4);
+}
+
+.button - primary i {
+  margin - right: 8px;
+}
+
+.button - secondary {
+  padding: 12px 24px;
+  background - color: #f8f9fa;
+  color: #666;
+  border: 2px solid #e9ecef;
+  border - radius: 12px;
+  font - size: 16px;
+  font - weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline - flex;
+  align - items: center;
+  justify - content: center;
+  min - width: 120px;
+}
+
+.button - secondary:hover {
+  background - color: #e9ecef;
+  border - color: #dee2e6;
+}
+
+.button - secondary i {
+  margin - right: 8px;
+}
+
+/* ===== ローディング ===== */
+.loader - overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100 %;
+  height: 100 %;
+  background - color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex - direction: column;
+  justify - content: center;
+  align - items: center;
+  z - index: 10001;
+  backdrop - filter: blur(5px);
+}
+
+.loader {
+  width: 50px;
+  height: 50px;
+  border: 5px solid #f3f3f3;
+  border - top: 5px solid #4facfe;
+  border - radius: 50 %;
+  animation: spin 1s linear infinite;
+  margin - bottom: 20px;
+}
+
+@keyframes spin {
+  0 % { transform: rotate(0deg); }
+  100 % { transform: rotate(360deg); }
+}
+
+.loader - text {
+  color: white;
+  font - size: 18px;
+  font - weight: 500;
+  text - align: center;
+}
+
+/* ===== ユーティリティクラス ===== */
+.hidden {
+  display: none!important;
+}
+
+.text - center {
+  text - align: center;
+}
+
+.mb - 0 {
+  margin - bottom: 0!important;
+}
+
+.mt - 16 {
+  margin - top: 16px;
+}
+
+/* ===== 通知スタイル ===== */
+.notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 16px 24px;
+  border - radius: 12px;
+  color: white;
+  font - weight: 600;
+  z - index: 10002;
+  max - width: 350px;
+  word - wrap: break-word;
+  box - shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  backdrop - filter: blur(10px);
+  animation: slideIn 0.3s ease - out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100 %);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.notification - success {
+  background: linear - gradient(135deg, #28a745 0 %, #20c997 100 %);
+}
+
+.notification - error {
+  background: linear - gradient(135deg, #dc3545 0 %, #e74c3c 100 %);
+}
+
+.notification - warning {
+  background: linear - gradient(135deg, #ffc107 0 %, #ff8c00 100 %);
+}
+
+.notification - info {
+  background: linear - gradient(135deg, #17a2b8 0 %, #007bff 100 %);
+}
+
+/* ===== レスポンシブデザイン ===== */
+@media(max - width: 768px) {
+  .container {
+    margin: 10px;
+    border - radius: 12px;
   }
 
-  // === 地図の初期化 ===
-  L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
-    attribution: "地理院タイル（GSI）",
-    maxZoom: 18,
-  }).addTo(map);
-
-  function updateCenterCoords() {
-    const center = map.getCenter();
-    coordsDisplay.innerText = `緯度: ${center.lat.toFixed(6)} 経度: ${center.lng.toFixed(6)}`;
-    latInput.value = center.lat;
-    lngInput.value = center.lng;
-    console.log("updateCenterCoords called. Setting latitude:", latInput.value, "longitude:", lngInput.value);
+  #report - form {
+    padding: 24px;
   }
 
-  map.on('move', updateCenterCoords);
-  updateCenterCoords();
-
-  // 現在位置の取得
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        map.setView([pos.coords.latitude, pos.coords.longitude], 18);
-      },
-      error => {
-        console.warn('位置情報の取得に失敗しました:', error);
-        showNotification('位置情報の取得に失敗しました。手動で位置を調整してください。', 'warning');
-      }
-    );
+  #report - form h2 {
+    font - size: 24px;
+    margin - bottom: 24px;
+  }
+  
+  .photo - controls {
+    flex - direction: column;
+  }
+  
+  .button - like - input,
+  .camera - button {
+    width: 100 %;
+    justify - content: center;
   }
 
-  // ▼▼▼【追加】写真データとプレビューを更新する共通関数 ▼▼▼
-  /**
-   * 写真データとプレビューを更新する
-   * @param {string | null} data - Base64データURL
-   * @param {string | null} mimeType - MIMEタイプ
-   */
-  function updatePhoto(data, mimeType) {
-    if (data && mimeType) {
-      currentPhoto.data = data;
-      currentPhoto.mimeType = mimeType;
-      imagePreview.src = data;
-      imagePreview.style.display = 'block'; // プレビューを表示
-      // ファイル選択の値をリセットし、カメラ撮影後に再度ファイル選択できるようにする
-      photoInput.value = '';
-    } else {
-      // データがない場合はリセット
-      currentPhoto.data = null;
-      currentPhoto.mimeType = null;
-      imagePreview.src = '#';
-      imagePreview.style.display = 'none'; // プレビューを非表示
-      photoInput.value = '';
-    }
+  #map - wrapper {
+    height: 250px;
+  }
+  
+  .modal - content {
+    padding: 24px;
+    margin: 20px;
+  }
+  
+  .modal - controls {
+    flex - direction: column;
+  }
+  
+  .button - primary,
+  .button - secondary {
+    width: 100 %;
+  }
+  
+  .notification {
+    right: 10px;
+    left: 10px;
+    max - width: none;
+  }
+}
+
+@media(max - width: 480px) {
+  .container {
+    margin: 5px;
   }
 
-  // === 写真プレビューと検証 ===
-  photoInput.addEventListener('change', function () {
-    if (this.files && this.files[0]) {
-      const file = this.files[0];
-
-      // ファイルサイズチェック
-      if (file.size > CONFIG.MAX_FILE_SIZE) {
-        showNotification('ファイルサイズが大きすぎます。5MB以下のファイルを選択してください。', 'error');
-        updatePhoto(null, null);
-        return;
-      }
-
-      // ファイル形式チェック
-      if (!CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) {
-        showNotification('対応していないファイル形式です。JPEG、PNG、GIF、WebPファイルを選択してください。', 'error');
-        updatePhoto(null, null);
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = e => {
-        updatePhoto(e.target.result, file.type);
-      }
-      reader.onerror = () => {
-        showNotification('ファイルの読み込みに失敗しました。', 'error');
-        updatePhoto(null, null);
-      }
-      reader.readAsDataURL(file);
-      console.log(reader.readAsDataURL(file));
-    }
-  });
-
-  // ===カメラ撮影のロジック ===
-
-  // カメラ起動処理を独立した関数にまとめる
-  async function startCamera() {
-    //カメラ起動を試みる前に、ビューを正常状態にセット
-    videoWrapper.classList.remove('hidden');
-    cameraErrorView.classList.add('hidden');
-    captureButton.classList.remove('hidden');
-
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      handleCameraError(new Error('mediaDevices API not supported'));
-      return;
-    }
-
-    try {
-      // const constraints = { video: { facingMode: { ideal: 'environment' } } };
-      const constraints = { video: true };
-      videoStream = await navigator.mediaDevices.getUserMedia(constraints);
-      videoElement.srcObject = videoStream;
-      //成功したらモーダルを開く
-      cameraModal.classList.remove('hidden');
-    } catch (err) {
-      //エラーが発生したらエラー処理関数を呼ぶ
-      handleCameraError(err);
-    }
+  #report - form {
+    padding: 20px;
   }
 
-  //カメラ起動エラーを処理する専用の関数
-  function handleCameraError(err) {
-    console.error('カメラの起動に失敗:', err);
-
-    //エラーの種類に応じてユーザーへのメッセージを変える
-    let message = 'カメラの起動に失敗しました。「ファイルを選択」ボタンを押してください。';
-    if (err.name === 'NotAllowedError' || err.name === `PermissionDeniedError`) {
-      message = 'カメラへのアクセスが拒否されました。「ファイルを選択」ボタンを押してください。';
-    } else if (err.name === 'NotFoundError' || err.name === `DeviceNotFoundError`) {
-      message = '利用可能なカメラが見つかりませんでした。「ファイルを選択」ボタンを押してください。';
-    } else if (err.message.includes('mediaDevices')) {
-      message = '利用可能なカメラが見つかりませんでした。「ファイルを選択」ボタンを押してください。';
-    }
-
-    //エラー用のビューを表示
-    cameraErrorText.textContent = message;
-    videoWrapper.classList.add('hidden');
-    cameraErrorView.classList.remove('hidden');
-    captureButton.classList.add('hidden');
-
-    //エラーでもモーダルは表示する
-    cameraModal.classList.remove('hidden');
+  #report - form h2 {
+    font - size: 20px;
+  }
+  
+  .form - group label {
+    font - size: 14px;
+  }
+  
+  textarea {
+    font - size: 14px;
+    padding: 12px;
   }
 
-  //カメラを停止し、ビューの状態をリセットする関数
-  function stopCamera() {
-    if (videoStream) {
-      videoStream.getTracks().forEach(track => track.stop());
-      videoStream = null;
-    }
-    videoElement.srcObject = null;
-    cameraModal.classList.add('hidden');
-
-    //モーダルを閉じる際に、ビューの状態を次回のためにリセットする
-    setTimeout(() => {
-      videoWrapper.classList.remove('hidden');
-      cameraErrorView.classList.add('hidden');
-      captureButton.classList.remove('hidden');
-    }, 300);
+  #btn - submit {
+    font - size: 16px;
+    padding: 16px;
   }
 
-  // === イベントリスナー ===
-
-  //「カメラで撮影」ボタンが押されたらカメラを起動
-  startCameraButton.addEventListener('click', startCamera);
-
-  //「再試行」ボタンが押されたら、もう一度カメラを起動
-  retryCameraButton.addEventListener('click', startCamera);
-
-  //「キャンセル」ボタンが押されたらカメラを起動
-  cancelButton.addEventListener('click', stopCamera);
-
-  //「撮影」写真データの処理
-  captureButton.addEventListener('click', () => {
-    canvasElement.width = videoElement.videoWidth;
-    canvasElement.height = videoElement.videoHeight;
-    const context = canvasElement.getContext('2d');
-    context.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
-
-    const mimeType = 'image/jpeg';
-    const dataUrl = canvasElement.toDataURL(mimeType, 0.9);
-    updatePhoto(dataUrl, mimeType);
-    stopCamera();
-  });
-
-  // === フォーム送信処理 ===
-  form.addEventListener('submit', function (e) {
-    e.preventDefault();
-
-    // 二重送信防止
-    if (loader.classList.contains('sending')) {
-      return;
-    }
-
-    const formData = new FormData(form);
-
-    handleFormSubmission(formData);
-  });
-
-  /**
-   * フォーム送信の処理
-   */
-  async function handleFormSubmission(formData) {
-    try {
-      // 送信状態の設定
-      setSubmissionState(true, '通報を送信中...');
-
-      // フォームデータの検証
-      const validationResult = validateFormData(formData);
-      if (!validationResult.isValid) {
-        throw new Error(validationResult.message);
-      }
-
-      // 写真データの処理
-      //const photoData = await processPhotoData();
-
-      // データ送信（リトライ機能付き）
-      const result = await sendDataWithRetry(formData, currentPhoto.data, currentPhoto.mimeType);
-
-      // 成功処理
-      handleSubmissionSuccess(result);
-
-    } catch (error) {
-      // エラー処理
-      handleSubmissionError(error);
-    } finally {
-      // 送信状態の解除
-      setSubmissionState(false);
-    }
+  #map - wrapper {
+    height: 200px;
   }
 
-  /**
-   * フォームデータの検証
-   */
-  function validateFormData(formData) {
+  #center - pin {
+    font - size: 24px;
+  }
+}
 
-    // デバッグ用：実際の値を確認
-    console.log('緯度の値:', formData.get('latitude'));
-    console.log('経度の値:', formData.get('longitude'));
-    console.log('通報種別の値:', formData.get('type'));
+/* ===== アクセシビリティ ===== */
+@media(prefers - reduced - motion: reduce) {
+  * {
+    animation- duration: 0.01ms!important;
+  animation - iteration - count: 1!important;
+  transition - duration: 0.01ms!important;
+}
+}
 
-    // 必須フィールドのチェック
-    const requiredFields = [
-      { name: 'latitude', label: '場所' },
-      { name: 'longitude', label: '場所' },
-      { name: 'type', label: '異常の不具合' }
-    ];
+/* フォーカス表示の改善 */
+button: focus,
+  input: focus,
+    textarea: focus,
+      label:focus {
+  outline: 2px solid #4facfe;
+  outline - offset: 2px;
+}
 
-    for (const field of requiredFields) {
-      const value = formData.get(field.name);
-      if (!value || value.trim() === '') {
-        if (field.name.includes('itude')) {
-          return { isValid: false, message: '場所が指定されていません。地図を動かして位置を合わせてください。' };
-        }
-        return {
-          isValid: false,
-          message: `${field.label}が入力されていません。`
-        };
-      }
-    }
-
-    // 座標の妥当性チェック
-    const lat = parseFloat(formData.get('latitude'));
-    const lng = parseFloat(formData.get('longitude'));
-
-    if (isNaN(lat) || lat < -90 || lat > 90) {
-      return {
-        isValid: false,
-        message: '緯度の値が正しくありません。'
-      };
-    }
-
-    if (isNaN(lng) || lng < -180 || lng > 180) {
-      return {
-        isValid: false,
-        message: '経度の値が正しくありません。'
-      };
-    }
-
-    return { isValid: true };
+/* ハイコントラストモード対応 */
+@media(prefers - contrast: high) {
+  .container {
+    border: 2px solid #000;
+  }
+  
+  button {
+    border: 2px solid #000;
   }
 
-  /**
-   * データ送信（リトライ機能付き）
-   */
-  async function sendDataWithRetry(formData, photoData, photoMimeType, attempt = 1) {
-    try {
-      const payload = {
-        latitude: formData.get('latitude'),
-        longitude: formData.get('longitude'),
-        type: formData.get('type'),
-        details: formData.get('details'),
-        photoData: photoData,
-        photoMimeType: photoMimeType,
-        timestamp: new Date().toISOString()
-      };
-
-      // タイムアウト付きfetch
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), CONFIG.REQUEST_TIMEOUT);
-
-      const response = await fetch(GAS_WEB_APP_URL, {
-        method: 'POST',
-        body: JSON.stringify(payload),
-        headers: {
-          'Content-Type': 'text/plain',
-        },
-        mode: 'cors',
-        signal: controller.signal
-      });
-
-      clearTimeout(timeoutId);
-
-      // レスポンスの検証
-      if (!response.ok) {
-        throw new Error(`サーバーエラー: ${response.status} ${response.statusText}`);
-      }
-
-      // JSONレスポンスの解析
-      let data;
-      try {
-        const responseText = await response.text();
-        data = JSON.parse(responseText);
-      } catch (parseError) {
-        throw new Error('サーバーからの応答を解析できませんでした。');
-      }
-
-      // 成功判定
-      if (data.status === 'success') {
-        return data;
-      } else {
-        throw new Error(data.message || 'サーバーでエラーが発生しました。');
-      }
-
-    } catch (error) {
-      console.error(`送信試行 ${attempt} 失敗:`, error);
-
-      // リトライ判定
-      if (attempt < CONFIG.MAX_RETRY_ATTEMPTS && shouldRetry(error)) {
-        showNotification(`送信に失敗しました。${CONFIG.RETRY_DELAY / 1000}秒後に再試行します... (${attempt}/${CONFIG.MAX_RETRY_ATTEMPTS})`, 'warning');
-
-        await new Promise(resolve => setTimeout(resolve, CONFIG.RETRY_DELAY));
-        return sendDataWithRetry(formData, photoData, photoMimeType, attempt + 1);
-      }
-
-      // 最終的な失敗
-      throw error;
-    }
+  input, textarea {
+    border: 2px solid #000;
   }
+}
 
-  /**
-   * リトライすべきエラーかどうかの判定
-   */
-  function shouldRetry(error) {
-    // ネットワークエラーやタイムアウトの場合はリトライ
-    return error.name === 'AbortError' ||
-      error.message.includes('fetch') ||
-      error.message.includes('network') ||
-      error.message.includes('timeout');
-  }
 
-  /**
-   * 送信成功時の処理
-   */
-  function handleSubmissionSuccess(result) {
-    showNotification('通報を受け付けました。ご協力ありがとうございます。', 'success');
-
-    // フォームのリセット
-    form.reset();
-    imagePreview.style.display = 'none';
-    updatePhoto(null, null);
-
-    // 地図の中心座標を更新
-    updateCenterCoords();
-
-    console.log('送信成功:', result);
-  }
-
-  /**
-   * 送信エラー時の処理
-   */
-  function handleSubmissionError(error) {
-    console.error('送信エラー:', error);
-
-    let errorMessage = '送信に失敗しました。';
-
-    // エラーの種類に応じたメッセージ
-    if (error.name === 'AbortError') {
-      errorMessage = '送信がタイムアウトしました。ネットワーク接続を確認してください。';
-    } else if (error.message.includes('CORS')) {
-      errorMessage = 'サーバーとの通信に問題があります。しばらく時間をおいて再度お試しください。';
-    } else if (error.message) {
-      errorMessage = `エラー: ${error.message}`;
-    }
-
-    showNotification(errorMessage, 'error');
-  }
-
-  /**
-   * 送信状態の設定
-   */
-  function setSubmissionState(isSending) {
-    if (isSending) {
-      loader.classList.remove('hidden');
-      loader.classList.add('sending');
-
-      // フォーム要素を無効化
-      const formElements = form.querySelectorAll('input, select, textarea, button');
-      formElements.forEach(element => element.disabled = true);
-
-    } else {
-      loader.classList.add('hidden');
-      loader.classList.remove('sending');
-
-      // フォーム要素を有効化
-      const formElements = form.querySelectorAll('input, select, textarea, button');
-      formElements.forEach(element => element.disabled = false);
-    }
-  }
-
-  /**
-   * 通知メッセージの表示
-   */
-  function showNotification(message, type = 'info') {
-    // 既存の通知を削除
-    const existingNotification = document.querySelector('.notification');
-    if (existingNotification) {
-      existingNotification.remove();
-    }
-
-    // 新しい通知を作成
-    const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
-    notification.textContent = message;
-
-    // スタイルを設定
-    notification.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      padding: 12px 20px;
-      border-radius: 4px;
-      color: white;
-      font-weight: bold;
-      z-index: 10000;
-      max-width: 300px;
-      word-wrap: break-word;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    `;
-
-    // タイプ別の色設定
-    switch (type) {
-      case 'success':
-        notification.style.backgroundColor = '#10b981';
-        break;
-      case 'error':
-        notification.style.backgroundColor = '#ef4444';
-        break;
-      case 'warning':
-        notification.style.backgroundColor = '#f59e0b';
-        break;
-      default:
-        notification.style.backgroundColor = '#3b82f6';
-    }
-
-    document.body.appendChild(notification);
-
-    // 5秒後に自動削除
-    setTimeout(() => {
-      if (notification.parentNode) {
-        notification.remove();
-      }
-    }, 5000);
-  }
-});

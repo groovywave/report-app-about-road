@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>道路異状通報フォーム</title>
+<title>道路不具合通報フォーム</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 <link rel="stylesheet" href="style.css" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -19,10 +19,10 @@
 <!-- メインコンテンツ -->
 <div class="container">
     <form id="report-form" novalidate>
-        <h2>道路の異状を通報</h2>
+        <h2>道路の不具合を通報</h2>
         
         <div class="form-group">
-            <label>1. 異状の種類</label>
+            <label>1. 不具合の種類</label>
             <div class="radio-group">
                 <input type="radio" id="type1" name="type" value="雑草" required><label for="type1">雑草</label><br>
                 <input type="radio" id="type2" name="type" value="倒木"><label for="type2">倒木</label><br>
@@ -66,18 +66,18 @@
     </form>
 </div>
 
-<!-- ▼▼▼【ここから修正】カメラ撮影用モーダルの構造を更新 ▼▼▼ -->
+<!-- カメラ撮影用モーダル -->
 <div id="camera-modal" class="modal-overlay hidden">
     <div class="modal-content">
         <h2>カメラ撮影</h2>
 
-        <!-- 【正常時】カメラ映像を表示するビュー -->
+        <!-- カメラ映像を表示するビュー -->
         <div id="video-wrapper">
-            <video id="camera-stream" playsinline autoplay></video>
+            <video id="camera-stream" playsinline autoplay muted></video>
             <canvas id="camera-canvas" style="display: none;"></canvas>
         </div>
 
-        <!-- 【エラー時】エラーメッセージと再試行ボタンを表示するビュー -->
+        <!-- エラーメッセージと再試行ボタンを表示するビュー -->
         <div id="camera-error-view" class="hidden">
             <p id="camera-error-text"></p>
             <button type="button" id="retry-camera-btn" class="button-primary">
@@ -87,19 +87,19 @@
 
         <!-- 操作ボタンエリア -->
         <div class="modal-controls">
-            <!-- 「撮影」ボタンは正常時のみ表示 -->
             <button type="button" id="capture-btn" class="button-primary">
                 <i class="fas fa-camera-retro"></i> 撮影
             </button>
-            <!-- 「キャンセル」ボタンは常に表示 -->
             <button type="button" id="cancel-camera-btn" class="button-secondary">
                 <i class="fas fa-times"></i> キャンセル
             </button>
         </div>
     </div>
 </div>
-<!-- ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ -->
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<script src="script.js"></script> <!-- JavaScriptを外部ファイルから読み込み -->
+<script src="script.js"></script>
 </body>
 </html>
+
+
