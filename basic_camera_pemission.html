@@ -627,21 +627,31 @@
                 addDebugLog('通報フォームに戻る処理開始');
                 
                 try {
-                    // 元のタブが存在する場合は閉じて元のタブに戻る
+                    // ポップアップウィンドウとして開かれた場合の処理
                     if (window.opener && !window.opener.closed) {
-                        addDebugLog('元のタブに戻る');
+                        addDebugLog('ポップアップウィンドウを閉じて元のタブに戻る');
+                        
+                        // 元のタブにフォーカスを当てる
                         window.opener.focus();
+                        
+                        // ポップアップウィンドウを閉じる
                         window.close();
                     } else {
-                        // 元のタブがない場合は直接移動
-                        addDebugLog('直接移動');
+                        // 通常のタブとして開かれた場合は直接移動
+                        addDebugLog('通常のタブとして開かれているため直接移動');
                         window.location.href = 'index.html';
                     }
                 } catch (error) {
                     addDebugLog(`通報フォームに戻る際にエラー: ${error.message}`);
                     console.error('通報フォームに戻る際にエラーが発生:', error);
-                    // エラーの場合は直接移動
-                    window.location.href = 'index.html';
+                    
+                    // エラーの場合はウィンドウを閉じるか直接移動
+                    try {
+                        window.close();
+                    } catch (closeError) {
+                        addDebugLog('ウィンドウを閉じることができないため直接移動');
+                        window.location.href = 'index.html';
+                    }
                 }
             }
             
