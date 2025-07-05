@@ -136,17 +136,30 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // カメラ起動処理を独立した関数にまとめる
   async function startCamera() {
+    console.log('カメラ起動処理を開始');
+
     // カメラ起動を試みる前に、ビューを正常状態にセット
     videoWrapper.classList.remove('hidden');
     cameraErrorView.classList.add('hidden');
     captureButton.classList.remove('hidden');
 
+    // 環境チェック
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      handleCameraError(new Error('mediaDevices API not supported'));
+      console.error('MediaDevices API not supported');
+      handleCameraError(new Error('このブラウザではカメラAPIがサポートされていません'));
+      return;
+    }
+
+    // HTTPS接続チェック
+    if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+      console.error('HTTPS connection required');
+      handleCameraError(new Error('カメラアクセスにはHTTPS接続が必要です'));
       return;
     }
 
     try {
+      console.log('カメラ権限を要求中...');
+
       // 改良されたカメラ制約設定
       const constraints = {
         video: {
@@ -154,10 +167,15 @@ document.addEventListener('DOMContentLoaded', function() {
           width: { ideal: 1280, min: 640 },
           height: { ideal: 720, min: 480 },
           frameRate: { ideal: 30, min: 15 }
-        }
+        },
+        audio: false
       };
 
+      console.log('getUserMedia制約:', constraints);
+
       videoStream = await navigator.mediaDevices.getUserMedia(constraints);
+      console.log('カメラストリーム取得成功:', videoStream);
+
       videoElement.srcObject = videoStream;
 
       // iOS Safari対応
@@ -165,11 +183,22 @@ document.addEventListener('DOMContentLoaded', function() {
       videoElement.setAttribute('muted', '');
       videoElement.setAttribute('playsinline', '');
 
+      // ビデオの再生を確実にする
+      try {
+        await videoElement.play();
+        console.log('ビデオ再生開始');
+      } catch (playError) {
+        console.warn('ビデオ自動再生失敗:', playError);
+        // 自動再生に失敗した場合でも続行
+      }
+
       // 成功したらモーダルを開く
       cameraModal.classList.remove('hidden');
+      showNotification('カメラが起動しました', 'success');
 
       console.log('カメラ起動成功');
     } catch (err) {
+      console.error('カメラ起動エラー:', err);
       // エラーが発生したらエラー処理関数を呼ぶ
       handleCameraError(err);
     }
@@ -180,30 +209,60 @@ document.addEventListener('DOMContentLoaded', function() {
     console.error('カメラの起動に失敗:', err);
 
     // エラーの種類に応じてユーザーへのメッセージを変える
-    let message = 'カメラの起動に失敗しました。「ファイルを選択」ボタンを押してください。';
+    let message = 'カメラの起動に失敗しました。';
+    let guidance = '';
 
     if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-      message = 'カメラへのアクセスが拒否されました。ブラウザの設定でカメラアクセスを許可してください。';
+      message = 'カメラへのアクセスが拒否されました。';
+      guidance = `
+        <strong>解決方法:</strong><br>
+        1. ブラウザのアドレスバーにあるカメラアイコンをクリック<br>
+        2. 「カメラ」を「許可」に変更<br>
+        3. ページを再読み込み<br><br>
+        <strong>または設定から:</strong><br>
+        • Android: 設定 → アプリ → ブラウザ → 権限 → カメラ → 許可<br>
+        • iPhone: 設定 → Safari → カメラ → 許可
+      `;
     } else if (err.name === 'NotFoundError' || err.name === 'DeviceNotFoundError') {
-      message = '利用可能なカメラが見つかりませんでした。「ファイルを選択」ボタンを押してください。';
+      message = '利用可能なカメラが見つかりませんでした。';
+      guidance = 'デバイスにカメラが接続されているか確認してください。';
     } else if (err.name === 'NotReadableError') {
-      message = 'カメラが他のアプリケーションで使用中です。他のアプリを終了してから再試行してください。';
+      message = 'カメラが他のアプリケーションで使用中です。';
+      guidance = '他のアプリ（Zoom、Skype、カメラアプリ等）を終了してから再試行してください。';
     } else if (err.name === 'OverconstrainedError') {
-      message = 'カメラの設定に問題があります。再試行してください。';
+      message = 'カメラの設定に問題があります。';
+      guidance = '要求されたカメラ設定がサポートされていません。';
     } else if (err.name === 'SecurityError') {
-      message = 'セキュリティ上の理由でカメラアクセスが拒否されました。HTTPS接続が必要です。';
-    } else if (err.message.includes('mediaDevices')) {
-      message = 'このブラウザではカメラ機能がサポートされていません。「ファイルを選択」ボタンを押してください。';
+      message = 'セキュリティエラーが発生しました。';
+      guidance = 'HTTPS接続が必要です。';
+    } else if (err.message.includes('HTTPS')) {
+      message = 'HTTPS接続が必要です。';
+      guidance = 'カメラ機能を使用するには、HTTPS接続でアクセスしてください。';
+    } else if (err.message.includes('サポート')) {
+      message = 'このブラウザではカメラ機能がサポートされていません。';
+      guidance = '最新のChrome、Safari、Firefoxをご使用ください。';
+    } else {
+      message = `エラーが発生しました: ${err.message}`;
+      guidance = 'ページを再読み込みして再試行してください。';
     }
 
     // エラー用のビューを表示
-    cameraErrorText.textContent = message;
+    cameraErrorText.innerHTML = `
+      <div style="text-align: left;">
+        <p style="font-weight: bold; color: #dc3545; margin-bottom: 12px;">${message}</p>
+        <div style="font-size: 14px; line-height: 1.5;">${guidance}</div>
+      </div>
+    `;
+
     videoWrapper.classList.add('hidden');
     cameraErrorView.classList.remove('hidden');
     captureButton.classList.add('hidden');
 
     // エラーでもモーダルは表示する
     cameraModal.classList.remove('hidden');
+
+    // 通知も表示
+    showNotification(message, 'error');
   }
 
   // カメラを停止し、ビューの状態をリセットする関数

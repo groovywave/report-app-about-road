@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>道路不具合通報フォーム</title>
+<title>道路異状通報フォーム</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 <link rel="stylesheet" href="style.css" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -19,16 +19,31 @@
 <!-- メインコンテンツ -->
 <div class="container">
     <form id="report-form" novalidate>
-        <h2>道路の不具合を通報</h2>
+        <h2>道路の異状を通報</h2>
         
         <div class="form-group">
-            <label>1. 不具合の種類</label>
+            <label class="form-label">1. 異状の種類</label>
             <div class="radio-group">
-                <input type="radio" id="type1" name="type" value="雑草" required><label for="type1">雑草</label><br>
-                <input type="radio" id="type2" name="type" value="倒木"><label for="type2">倒木</label><br>
-                <input type="radio" id="type3" name="type" value="路面の穴ぼこ・段差"><label for="type3">路面の穴ぼこ・段差</label><br>
-                <input type="radio" id="type4" name="type" value="落下物・汚れ"><label for="type4">落下物・汚れ</label><br>
-                <input type="radio" id="type5" name="type" value="その他"><label for="type5">その他</label><br>
+                <div class="radio-item">
+                    <input type="radio" id="type1" name="type" value="雑草" required>
+                    <label for="type1">雑草</label>
+                </div>
+                <div class="radio-item">
+                    <input type="radio" id="type2" name="type" value="倒木">
+                    <label for="type2">倒木</label>
+                </div>
+                <div class="radio-item">
+                    <input type="radio" id="type3" name="type" value="路面の穴ぼこ・段差">
+                    <label for="type3">路面の穴ぼこ・段差</label>
+                </div>
+                <div class="radio-item">
+                    <input type="radio" id="type4" name="type" value="落下物・汚れ">
+                    <label for="type4">落下物・汚れ</label>
+                </div>
+                <div class="radio-item">
+                    <input type="radio" id="type5" name="type" value="その他">
+                    <label for="type5">その他</label>
+                </div>
             </div>
         </div>
         
