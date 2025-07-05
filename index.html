@@ -19,10 +19,32 @@
 <!-- メインコンテンツ -->
 <div class="container">
     <form id="report-form" novalidate>
-        <h2>道路の不具合を通報</h2>
+        <h2>道路の異状を通報</h2>
+        
+        <!-- カメラ権限設定セクション -->
+        <div class="camera-permission-section">
+            <div class="permission-info">
+                <i class="fas fa-camera permission-icon"></i>
+                <div class="permission-text">
+                    <h3>📷 カメラ機能について</h3>
+                    <p>写真撮影機能を使用するには、カメラへのアクセス許可が必要です。</p>
+                </div>
+            </div>
+            <div class="permission-buttons">
+                <button type="button" id="check-camera-permission" class="permission-button check-button">
+                    <i class="fas fa-shield-alt"></i> 権限状態を確認
+                </button>
+                <button type="button" id="request-camera-permission" class="permission-button request-button">
+                    <i class="fas fa-camera"></i> カメラ権限を要求
+                </button>
+            </div>
+            <div id="permission-status" class="permission-status hidden">
+                <span id="permission-status-text">権限状態を確認中...</span>
+            </div>
+        </div>
         
         <div class="form-group">
-            <label class="form-label">1. 不具合の種類</label>
+            <label class="form-label">1. 異状の種類</label>
             <div class="radio-group">
                 <div class="radio-item">
                     <input type="radio" id="type1" name="type" value="雑草" required>
@@ -67,7 +89,7 @@
         </div>
         
         <div class="form-group">
-            <label>4.不具合のある場所</label>
+            <label>4. 異状のある場所</label>
             <div id="map-wrapper">
                 <div id="map"></div>
                 <i id="center-pin" class="fas fa-map-marker-alt"></i>

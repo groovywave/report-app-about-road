@@ -34,6 +34,12 @@ document.addEventListener('DOMContentLoaded', function() {
   const photoInput = document.getElementById('photo');
   const imagePreview = document.getElementById('image-preview');
 
+  // カメラ権限関連の要素
+  const checkPermissionButton = document.getElementById('check-camera-permission');
+  const requestPermissionButton = document.getElementById('request-camera-permission');
+  const permissionStatus = document.getElementById('permission-status');
+  const permissionStatusText = document.getElementById('permission-status-text');
+
   const startCameraButton = document.getElementById('start-camera-btn');
   const cameraModal = document.getElementById('camera-modal');
   const videoWrapper = document.getElementById('video-wrapper');
@@ -48,6 +54,165 @@ document.addEventListener('DOMContentLoaded', function() {
   if (!startCameraButton) {
     console.error('カメラで撮影ボタンが見つかりません。');
   }
+
+  // === カメラ権限管理機能 ===
+
+  // 権限状態を表示する関数
+  function updatePermissionStatus(state, message) {
+    permissionStatus.className = `permission-status ${state}`;
+    permissionStatusText.textContent = message;
+    permissionStatus.classList.remove('hidden');
+
+    console.log(`権限状態更新: ${state} - ${message}`);
+  }
+
+  // 権限状態を確認する関数
+  async function checkCameraPermission() {
+    console.log('=== カメラ権限状態確認開始 ===');
+
+    updatePermissionStatus('checking', '権限状態を確認中...');
+
+    try {
+      // 基本的な環境チェック
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        updatePermissionStatus('error', 'このブラウザではカメラAPIがサポートされていません');
+        return 'unsupported';
+      }
+
+      // HTTPS接続チェック
+      if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+        updatePermissionStatus('error', 'カメラアクセスにはHTTPS接続が必要です');
+        return 'https_required';
+      }
+
+      // Permission APIで権限状態を確認
+      if (navigator.permissions) {
+        const permission = await navigator.permissions.query({ name: 'camera' });
+        const state = permission.state;
+
+        console.log(`Permission API結果: ${state}`);
+
+        switch (state) {
+          case 'granted':
+            updatePermissionStatus('granted', '✅ カメラアクセスが許可されています');
+            requestPermissionButton.textContent = '📷 カメラをテスト';
+            break;
+          case 'denied':
+            updatePermissionStatus('denied', '❌ カメラアクセスが拒否されています');
+            requestPermissionButton.textContent = '🔄 権限設定を確認';
+            break;
+          case 'prompt':
+            updatePermissionStatus('prompt', '⏳ カメラ権限が未設定です');
+            requestPermissionButton.textContent = '📷 カメラ権限を要求';
+            break;
+          default:
+            updatePermissionStatus('error', '❓ 権限状態が不明です');
+        }
+
+        return state;
+      } else {
+        updatePermissionStatus('prompt', 'ℹ️ Permission API未サポート - 直接権限要求を行ってください');
+        return 'unknown';
+      }
+
+    } catch (error) {
+      console.error('権限確認エラー:', error);
+      updatePermissionStatus('error', `権限確認エラー: ${error.message}`);
+      return 'error';
+    }
+  }
+
+  // カメラ権限を要求する関数
+  async function requestCameraPermission() {
+    console.log('=== カメラ権限要求開始 ===');
+
+    // ボタンを無効化
+    requestPermissionButton.disabled = true;
+    const originalText = requestPermissionButton.textContent;
+    requestPermissionButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 権限要求中...';
+
+    updatePermissionStatus('checking', '📷 カメラ権限を要求しています...');
+
+    try {
+      // 最もシンプルな制約で権限要求
+      const constraints = {
+        video: true,
+        audio: false
+      };
+
+      console.log('getUserMedia実行中...', constraints);
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+      console.log('✅ カメラ権限取得成功!', stream);
+
+      // ストリームを即座に停止（テスト目的のため）
+      stream.getTracks().forEach(track => track.stop());
+
+      updatePermissionStatus('granted', '✅ カメラ権限が正常に設定されました！');
+      requestPermissionButton.textContent = '📷 カメラをテスト';
+
+      // 成功通知
+      showNotification('カメラ権限が正常に設定されました。写真撮影機能が利用可能です。', 'success');
+
+      return 'granted';
+
+    } catch (error) {
+      console.error('❌ カメラ権限要求失敗:', error);
+
+      let errorMessage = 'カメラ権限の要求に失敗しました。';
+      let statusClass = 'denied';
+
+      switch (error.name) {
+        case 'NotAllowedError':
+        case 'PermissionDeniedError':
+          errorMessage = '❌ カメラアクセスが拒否されました。ブラウザの設定で許可してください。';
+          break;
+        case 'NotFoundError':
+          errorMessage = '❌ カメラデバイスが見つかりません。';
+          break;
+        case 'NotSupportedError':
+          errorMessage = '❌ このブラウザではカメラがサポートされていません。';
+          statusClass = 'error';
+          break;
+        case 'NotReadableError':
+          errorMessage = '❌ カメラが他のアプリで使用中です。';
+          break;
+        default:
+          errorMessage = `❌ エラー: ${error.message}`;
+          statusClass = 'error';
+      }
+
+      updatePermissionStatus(statusClass, errorMessage);
+      showNotification(errorMessage, 'error');
+
+      return 'denied';
+
+    } finally {
+      // ボタンを有効化
+      requestPermissionButton.disabled = false;
+      requestPermissionButton.innerHTML = originalText;
+    }
+  }
+
+  // === イベントリスナーの設定 ===
+
+  // 権限状態確認ボタン
+  checkPermissionButton.addEventListener('click', function(event) {
+    console.log('権限状態確認ボタンクリック');
+    event.preventDefault();
+    checkCameraPermission();
+  });
+
+  // 権限要求ボタン
+  requestPermissionButton.addEventListener('click', function(event) {
+    console.log('権限要求ボタンクリック');
+    event.preventDefault();
+    requestCameraPermission();
+  });
+
+  // 初期権限チェックを実行
+  checkCameraPermission();
 
   // === 地図の初期化 ===
   L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
