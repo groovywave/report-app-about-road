@@ -32,10 +32,8 @@ document.addEventListener('DOMContentLoaded', function () {
   const imagePreview = document.getElementById('image-preview');
 
   // カメラ権限関連の要素
-  const checkPermissionButton = document.getElementById('check-camera-permission');
   const requestPermissionButton = document.getElementById('request-camera-permission');
   const permissionStatus = document.getElementById('permission-status');
-  const permissionStatusText = document.getElementById('permission-status-text');
 
   const startCameraButton = document.getElementById('start-camera-btn');
   const cameraModal = document.getElementById('camera-modal');
@@ -56,7 +54,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // 権限状態を表示する関数
   function updatePermissionStatus(state, message) {
-    if (permissionStatus && permissionStatusText) {
+    if (permissionStatus) {
       permissionStatus.className = `permission-status ${state}`;
 
       // 状態に応じたアイコンと絵文字を追加
@@ -94,7 +92,7 @@ document.addEventListener('DOMContentLoaded', function () {
         <span>${statusMessage}</span>
       `;
 
-      permissionStatus.classList.remove('hidden');
+      // 権限状態表示エリアは最初から表示されているため、hiddenクラスの操作は不要
     }
 
     console.log(`権限状態更新: ${state} - ${message}`);
@@ -241,15 +239,6 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   // === イベントリスナーの設定 ===
-
-  // 権限状態確認ボタン
-  if (checkPermissionButton) {
-    checkPermissionButton.addEventListener('click', function (event) {
-      console.log('権限状態確認ボタンクリック');
-      event.preventDefault();
-      checkCameraPermission();
-    });
-  }
 
   // 権限要求ボタン
   if (requestPermissionButton) {
