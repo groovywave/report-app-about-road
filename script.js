@@ -160,8 +160,15 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // カメラ起動処理を独立した関数にまとめる
-  async function startCamera() {
-    console.log('カメラ起動処理を開始');
+  async function startCamera(userEvent = null) {
+    console.log('カメラ起動処理を開始 - ユーザー操作によるトリガー');
+
+    // ユーザー操作の確認
+    if (userEvent) {
+      console.log('ユーザー操作イベント:', userEvent.type, userEvent.isTrusted);
+    } else {
+      console.log('ユーザー操作イベント: なし（直接呼び出し）');
+    }
 
     // カメラ起動を試みる前に、ビューを正常状態にセット
     videoWrapper.classList.remove('hidden');
@@ -182,48 +189,166 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
 
+    // ユーザー操作の直後に権限要求を実行
     try {
-      console.log('カメラ権限を要求中...');
+      console.log('カメラ権限を要求中... (ユーザー操作直後)');
 
-      // 改良されたカメラ制約設定
-      const constraints = {
-        video: {
-          facingMode: { ideal: 'environment' }, // 背面カメラを優先
-          width: { ideal: 1280, min: 640 },
-          height: { ideal: 720, min: 480 },
-          frameRate: { ideal: 30, min: 15 }
-        },
-        audio: false
-      };
+      // ブラウザ情報をログ出力
+      const userAgent = navigator.userAgent;
+      const isIOS = /iPad|iPhone|iPod/.test(userAgent);
+      const isSafari = /Safari/.test(userAgent) && !/Chrome/.test(userAgent);
+      const isChrome = /Chrome/.test(userAgent);
 
-      console.log('getUserMedia制約:', constraints);
+      console.log('ブラウザ情報:', {
+        userAgent,
+        isIOS,
+        isSafari,
+        isChrome,
+        mediaDevicesSupported: !!navigator.mediaDevices,
+        getUserMediaSupported: !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)
+      });
 
-      videoStream = await navigator.mediaDevices.getUserMedia(constraints);
-      console.log('カメラストリーム取得成功:', videoStream);
+      // iOS Safariの場合は特別な処理
+      if (isIOS && isSafari) {
+        console.log('iOS Safari検出 - 特別な処理を実行');
+
+        // iOS Safariでは最初に非常にシンプルな制約で試行
+        const iosConstraints = {
+          video: {
+            width: { ideal: 640 },
+            height: { ideal: 480 }
+          },
+          audio: false
+        };
+
+        console.log('iOS Safari用制約でgetUserMedia実行:', iosConstraints);
+        videoStream = await navigator.mediaDevices.getUserMedia(iosConstraints);
+
+      } else {
+        // その他のブラウザでは段階的に制約を適用
+        console.log('標準ブラウザ - 段階的制約適用');
+
+        // まず最小限の制約で権限要求を試行
+        const basicConstraints = {
+          video: true,
+          audio: false
+        };
+
+        console.log('基本制約でgetUserMedia実行:', basicConstraints);
+
+        // 権限要求の実行
+        videoStream = await navigator.mediaDevices.getUserMedia(basicConstraints);
+        console.log('基本権限取得成功:', videoStream);
+
+        // 権限が取得できたら、より詳細な制約で再取得
+        if (videoStream) {
+          // 一旦停止
+          videoStream.getTracks().forEach(track => track.stop());
+
+          // 詳細な制約で再取得
+          const detailedConstraints = {
+            video: {
+              facingMode: { ideal: 'environment' }, // 背面カメラを優先
+              width: { ideal: 1280, min: 640 },
+              height: { ideal: 720, min: 480 },
+              frameRate: { ideal: 30, min: 15 }
+            },
+            audio: false
+          };
+
+          console.log('詳細制約でgetUserMedia再実行:', detailedConstraints);
+          videoStream = await navigator.mediaDevices.getUserMedia(detailedConstraints);
+          console.log('詳細権限取得成功:', videoStream);
+        }
+      }
+
+      if (!videoStream) {
+        throw new Error('ビデオストリームの取得に失敗しました');
+      }
+
+      console.log('最終ビデオストリーム:', videoStream);
+      console.log('ビデオトラック数:', videoStream.getVideoTracks().length);
 
       videoElement.srcObject = videoStream;
 
-      // iOS Safari対応
-      videoElement.setAttribute('autoplay', '');
-      videoElement.setAttribute('muted', '');
-      videoElement.setAttribute('playsinline', '');
+      // iOS Safari対応の属性設定
+      videoElement.setAttribute('autoplay', 'true');
+      videoElement.setAttribute('muted', 'true');
+      videoElement.setAttribute('playsinline', 'true');
+      videoElement.setAttribute('webkit-playsinline', 'true');
+
+      // プロパティでも設定
+      videoElement.autoplay = true;
+      videoElement.muted = true;
+      videoElement.playsInline = true;
 
       // ビデオの再生を確実にする
       try {
-        await videoElement.play();
-        console.log('ビデオ再生開始');
+        console.log('ビデオ再生を開始...');
+        const playPromise = videoElement.play();
+
+        if (playPromise !== undefined) {
+          await playPromise;
+          console.log('ビデオ再生成功');
+        }
       } catch (playError) {
         console.warn('ビデオ自動再生失敗:', playError);
         // 自動再生に失敗した場合でも続行
+
+        // ユーザーに手動再生を促す
+        showNotification('カメラは起動しましたが、手動でビデオを再生してください', 'warning');
       }
+
+      // ビデオの状態を監視
+      videoElement.addEventListener('loadedmetadata', () => {
+        console.log('ビデオメタデータ読み込み完了:', {
+          videoWidth: videoElement.videoWidth,
+          videoHeight: videoElement.videoHeight,
+          duration: videoElement.duration
+        });
+      });
+
+      videoElement.addEventListener('canplay', () => {
+        console.log('ビデオ再生準備完了');
+      });
+
+      videoElement.addEventListener('playing', () => {
+        console.log('ビデオ再生中');
+      });
 
       // 成功したらモーダルを開く
       cameraModal.classList.remove('hidden');
       showNotification('カメラが起動しました', 'success');
 
-      console.log('カメラ起動成功');
+      console.log('カメラ起動成功 - 権限ダイアログが表示されたはずです');
+
+      // 権限状態をログ出力（可能な場合）
+      if (navigator.permissions) {
+        try {
+          const permission = await navigator.permissions.query({ name: 'camera' });
+          console.log('現在のカメラ権限状態:', permission.state);
+        } catch (permError) {
+          console.log('権限状態の確認でエラー:', permError);
+        }
+      }
+
     } catch (err) {
-      console.error('カメラ起動エラー:', err);
+      console.error('カメラ起動エラー - 詳細情報:', {
+        name: err.name,
+        message: err.message,
+        stack: err.stack,
+        constraint: err.constraint || 'なし'
+      });
+
+      // 特定のエラーに対する追加情報
+      if (err.name === 'NotAllowedError') {
+        console.log('権限拒否エラー - ユーザーが権限を拒否したか、権限ダイアログが表示されませんでした');
+      } else if (err.name === 'NotFoundError') {
+        console.log('デバイス未検出エラー - カメラデバイスが見つかりません');
+      } else if (err.name === 'NotReadableError') {
+        console.log('デバイス使用中エラー - カメラが他のアプリで使用されています');
+      }
+
       // エラーが発生したらエラー処理関数を呼ぶ
       handleCameraError(err);
     }
@@ -367,10 +492,24 @@ document.addEventListener('DOMContentLoaded', function() {
   // === イベントリスナー ===
 
   // 「カメラで撮影」ボタンが押されたらカメラを起動
-  startCameraButton.addEventListener('click', startCamera);
+  startCameraButton.addEventListener('click', function(event) {
+    console.log('カメラボタンクリック - ユーザー操作検出:', event);
+    event.preventDefault();
+    event.stopPropagation();
+
+    // ユーザー操作の直後に実行
+    startCamera(event);
+  }, { passive: false });
 
   // 「再試行」ボタンが押されたら、もう一度カメラを起動
-  retryCameraButton.addEventListener('click', startCamera);
+  retryCameraButton.addEventListener('click', function(event) {
+    console.log('再試行ボタンクリック - ユーザー操作検出:', event);
+    event.preventDefault();
+    event.stopPropagation();
+
+    // ユーザー操作の直後に実行
+    startCamera(event);
+  }, { passive: false });
 
   // 「キャンセル」ボタンが押されたらカメラを停止
   cancelButton.addEventListener('click', stopCamera);
