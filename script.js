@@ -58,7 +58,42 @@ document.addEventListener('DOMContentLoaded', function () {
   function updatePermissionStatus(state, message) {
     if (permissionStatus && permissionStatusText) {
       permissionStatus.className = `permission-status ${state}`;
-      permissionStatusText.textContent = message;
+
+      // 状態に応じたアイコンと絵文字を追加
+      let iconHTML = '';
+      let statusMessage = '';
+
+      switch (state) {
+        case 'granted':
+          iconHTML = '<span class="permission-status-icon">🟢</span>';
+          statusMessage = `✅ ${message}`;
+          break;
+        case 'denied':
+          iconHTML = '<span class="permission-status-icon">🔴</span>';
+          statusMessage = `❌ ${message}`;
+          break;
+        case 'prompt':
+          iconHTML = '<span class="permission-status-icon">🟡</span>';
+          statusMessage = `⏳ ${message}`;
+          break;
+        case 'checking':
+          iconHTML = '<span class="permission-status-icon"><i class="fas fa-spinner"></i></span>';
+          statusMessage = `🔍 ${message}`;
+          break;
+        case 'error':
+          iconHTML = '<span class="permission-status-icon">🔴</span>';
+          statusMessage = `⚠️ ${message}`;
+          break;
+        default:
+          iconHTML = '<span class="permission-status-icon">❓</span>';
+          statusMessage = `❓ ${message}`;
+      }
+
+      permissionStatus.innerHTML = `
+        ${iconHTML}
+        <span>${statusMessage}</span>
+      `;
+
       permissionStatus.classList.remove('hidden');
     }
 
@@ -93,25 +128,25 @@ document.addEventListener('DOMContentLoaded', function () {
 
         switch (state) {
           case 'granted':
-            updatePermissionStatus('granted', '✅ カメラアクセスが許可されています');
+            updatePermissionStatus('granted', 'カメラアクセスが許可されています');
             if (requestPermissionButton) {
               requestPermissionButton.innerHTML = '<i class="fas fa-camera"></i> カメラをテスト';
             }
             break;
           case 'denied':
-            updatePermissionStatus('denied', '❌ カメラアクセスが拒否されています');
+            updatePermissionStatus('denied', 'カメラアクセスが拒否されています');
             if (requestPermissionButton) {
               requestPermissionButton.innerHTML = '<i class="fas fa-redo"></i> 権限設定を確認';
             }
             break;
           case 'prompt':
-            updatePermissionStatus('prompt', '⏳ カメラ権限が未設定です');
+            updatePermissionStatus('prompt', 'カメラ権限が未設定です');
             if (requestPermissionButton) {
               requestPermissionButton.innerHTML = '<i class="fas fa-camera"></i> カメラ権限を要求';
             }
             break;
           default:
-            updatePermissionStatus('error', '❓ 権限状態が不明です');
+            updatePermissionStatus('error', '権限状態が不明です');
         }
 
         return state;
@@ -159,7 +194,7 @@ document.addEventListener('DOMContentLoaded', function () {
       // ストリームを即座に停止（テスト目的のため）
       stream.getTracks().forEach(track => track.stop());
 
-      updatePermissionStatus('granted', '✅ カメラ権限が正常に設定されました！');
+      updatePermissionStatus('granted', 'カメラ権限が正常に設定されました！');
       requestPermissionButton.innerHTML = '<i class="fas fa-camera"></i> カメラをテスト';
 
       // 成功通知
@@ -176,20 +211,20 @@ document.addEventListener('DOMContentLoaded', function () {
       switch (error.name) {
         case 'NotAllowedError':
         case 'PermissionDeniedError':
-          errorMessage = '❌ カメラアクセスが拒否されました。ブラウザの設定で許可してください。';
+          errorMessage = 'カメラアクセスが拒否されました。ブラウザの設定で許可してください。';
           break;
         case 'NotFoundError':
-          errorMessage = '❌ カメラデバイスが見つかりません。';
+          errorMessage = 'カメラデバイスが見つかりません。';
           break;
         case 'NotSupportedError':
-          errorMessage = '❌ このブラウザではカメラがサポートされていません。';
+          errorMessage = 'このブラウザではカメラがサポートされていません。';
           statusClass = 'error';
           break;
         case 'NotReadableError':
-          errorMessage = '❌ カメラが他のアプリで使用中です。';
+          errorMessage = 'カメラが他のアプリで使用中です。';
           break;
         default:
-          errorMessage = `❌ エラー: ${error.message}`;
+          errorMessage = `エラー: ${error.message}`;
           statusClass = 'error';
       }
 
