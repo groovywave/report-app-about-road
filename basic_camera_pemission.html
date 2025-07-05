@@ -218,6 +218,19 @@
             margin-bottom: 4px;
         }
         
+        .debug-info {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 16px;
+            font-size: 12px;
+            color: #666;
+            font-family: monospace;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
         @media (max-width: 480px) {
             .container {
                 margin: 10px;
@@ -239,7 +252,7 @@
         <div class="header">
             <div class="camera-icon">📷</div>
             <h1>カメラアクセス許可</h1>
-            <p class="description">
+            <p class="description" id="description">
                 この機能を使用するには、カメラへのアクセス許可が必要です。<br>
                 ブラウザから権限要求が表示されたら「許可」を選択してください。
             </p>
@@ -289,11 +302,25 @@
             <strong>システム情報:</strong><br>
             <span id="browserInfo">ブラウザ情報を取得中...</span>
         </div>
+        
+        <div class="debug-info" id="debugInfo">
+            <strong>デバッグログ:</strong><br>
+            <div id="debugLog">初期化中...</div>
+        </div>
     </div>
 
     <script>
-        // カメラ権限要求の改良実装
-        class EnhancedCameraPermissionManager {
+        // デバッグログ機能
+        function addDebugLog(message) {
+            const debugLog = document.getElementById('debugLog');
+            const timestamp = new Date().toLocaleTimeString();
+            debugLog.innerHTML += `[${timestamp}] ${message}<br>`;
+            debugLog.scrollTop = debugLog.scrollHeight;
+            console.log(`[Camera Debug] ${message}`);
+        }
+
+        // カメラ権限要求の確実な実装
+        class SimpleCameraPermissionManager {
             constructor() {
                 this.video = document.getElementById('cameraPreview');
                 this.statusDiv = document.getElementById('status');
@@ -305,16 +332,24 @@
                 this.currentStream = null;
                 this.permissionState = 'unknown';
                 
+                addDebugLog('SimpleCameraPermissionManager初期化開始');
                 this.init();
             }
             
             init() {
+                addDebugLog('初期化処理開始');
+                
                 // イベントリスナーの設定
-                this.requestButton.addEventListener('click', () => {
-                    this.requestCameraPermission();
+                this.requestButton.addEventListener('click', (event) => {
+                    addDebugLog('カメラ権限要求ボタンクリック');
+                    event.preventDefault();
+                    event.stopPropagation();
+                    this.requestCameraPermissionDirect();
                 });
                 
-                this.checkButton.addEventListener('click', () => {
+                this.checkButton.addEventListener('click', (event) => {
+                    addDebugLog('権限状態確認ボタンクリック');
+                    event.preventDefault();
                     this.checkPermissionStatus();
                 });
                 
@@ -322,6 +357,7 @@
                 const returnButton = document.getElementById('returnToForm');
                 if (returnButton) {
                     returnButton.addEventListener('click', () => {
+                        addDebugLog('通報フォームに戻るボタンクリック');
                         this.returnToReportForm();
                     });
                 }
@@ -330,9 +366,9 @@
                 this.updateDeviceInfo();
                 this.checkEnvironment();
                 this.checkPermissionStatus();
-                
-                // URLパラメータをチェックして、通報フォームから来た場合は戻るボタンを表示
                 this.checkReferrer();
+                
+                addDebugLog('初期化処理完了');
             }
             
             updateDeviceInfo() {
@@ -354,11 +390,15 @@
                 else if (ua.includes('iPhone') || ua.includes('iPad')) osName = 'iOS';
                 
                 this.browserInfo.textContent = `${browserName} on ${osName}`;
+                addDebugLog(`ブラウザ情報: ${browserName} on ${osName}`);
             }
             
             checkEnvironment() {
+                addDebugLog('環境チェック開始');
+                
                 // HTTPS接続の確認
-                if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+                if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+                    addDebugLog('HTTPS接続エラー');
                     this.updateStatus('⚠️ カメラアクセスにはHTTPS接続が必要です。<br><small>本番環境ではHTTPS接続をご使用ください。</small>', 'error');
                     this.requestButton.disabled = true;
                     return false;
@@ -366,16 +406,20 @@
                 
                 // getUserMedia APIのサポート確認
                 if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    addDebugLog('MediaDevices API未サポート');
                     this.updateStatus('❌ このブラウザではカメラAPIがサポートされていません。<br><small>最新のブラウザをご使用ください。</small>', 'error');
                     this.requestButton.disabled = true;
                     return false;
                 }
                 
+                addDebugLog('環境チェック完了 - 問題なし');
                 this.updateStatus('✅ 環境チェック完了。カメラ機能が利用可能です。', 'success');
                 return true;
             }
             
             async checkPermissionStatus() {
+                addDebugLog('権限状態チェック開始');
+                
                 try {
                     if (navigator.permissions) {
                         const permission = await navigator.permissions.query({name: 'camera'});
@@ -383,6 +427,7 @@
                         
                         const statusText = this.getPermissionStatusText(permission.state);
                         this.updateStatus(`🔍 現在の権限状態: ${statusText}`, 'info');
+                        addDebugLog(`権限状態: ${permission.state}`);
                         
                         // 権限状態に応じてボタンテキストを更新
                         this.updateButtonState(permission.state);
@@ -393,11 +438,14 @@
                             const newStatusText = this.getPermissionStatusText(permission.state);
                             this.updateStatus(`🔄 権限状態が変更されました: ${newStatusText}`, 'info');
                             this.updateButtonState(permission.state);
+                            addDebugLog(`権限状態変更: ${permission.state}`);
                         });
                     } else {
+                        addDebugLog('Permission API未サポート');
                         this.updateStatus('ℹ️ Permission API未サポート - 権限状態を直接確認できません', 'warning');
                     }
                 } catch (error) {
+                    addDebugLog(`権限チェックエラー: ${error.message}`);
                     console.error('Permission check error:', error);
                     this.updateStatus('⚠️ 権限状態の確認中にエラーが発生しました', 'warning');
                 }
@@ -432,60 +480,69 @@
                 }
             }
             
-            async requestCameraPermission() {
+            // 最もシンプルで確実なカメラ権限要求
+            requestCameraPermissionDirect() {
+                addDebugLog('=== カメラ権限要求開始 ===');
+                
                 // ボタン状態の更新
                 this.requestButton.disabled = true;
                 const originalText = this.requestButton.textContent;
                 this.requestButton.innerHTML = '<span class="loading"></span>権限要求中...';
                 
                 this.updateStatus('📷 カメラ権限を要求しています...', 'info');
+                addDebugLog('getUserMedia実行準備');
                 
-                try {
-                    // 改良されたカメラ制約設定
-                    const constraints = this.getOptimalConstraints();
-                    console.log('Camera constraints:', constraints);
-                    
-                    const stream = await navigator.mediaDevices.getUserMedia(constraints);
-                    
-                    // 成功時の処理
-                    this.handlePermissionGranted(stream);
-                    
-                } catch (error) {
-                    // エラー時の処理
-                    this.handlePermissionError(error);
-                } finally {
-                    // ボタン状態の復元
-                    this.requestButton.disabled = false;
-                    this.requestButton.innerHTML = originalText;
-                }
-            }
-            
-            getOptimalConstraints() {
-                const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                // 最もシンプルな制約
+                const constraints = {
+                    video: true,
+                    audio: false
+                };
                 
-                if (isMobile) {
-                    return {
-                        video: {
-                            facingMode: { ideal: 'environment' }, // 背面カメラを優先
-                            width: { ideal: 1280, min: 640 },
-                            height: { ideal: 720, min: 480 },
-                            frameRate: { ideal: 30, min: 15 }
-                        },
-                        audio: false
-                    };
-                } else {
-                    return {
-                        video: {
-                            width: { ideal: 1920, min: 1280 },
-                            height: { ideal: 1080, min: 720 },
-                            frameRate: { ideal: 30 }
-                        },
-                        audio: false
-                    };
-                }
+                addDebugLog(`制約設定: ${JSON.stringify(constraints)}`);
+                
+                // 直接getUserMediaを実行
+                navigator.mediaDevices.getUserMedia(constraints)
+                    .then((stream) => {
+                        addDebugLog('✅ getUserMedia成功');
+                        this.handlePermissionGranted(stream);
+                    })
+                    .catch((error) => {
+                        addDebugLog(`❌ getUserMedia失敗: ${error.name} - ${error.message}`);
+                        
+                        // 背面カメラ指定で再試行
+                        if (error.name !== 'NotAllowedError' && error.name !== 'PermissionDeniedError') {
+                            addDebugLog('背面カメラ指定で再試行');
+                            
+                            const fallbackConstraints = {
+                                video: {
+                                    facingMode: 'environment'
+                                },
+                                audio: false
+                            };
+                            
+                            navigator.mediaDevices.getUserMedia(fallbackConstraints)
+                                .then((stream) => {
+                                    addDebugLog('✅ 背面カメラで成功');
+                                    this.handlePermissionGranted(stream);
+                                })
+                                .catch((fallbackError) => {
+                                    addDebugLog(`❌ 背面カメラでも失敗: ${fallbackError.name} - ${fallbackError.message}`);
+                                    this.handlePermissionError(fallbackError);
+                                });
+                        } else {
+                            this.handlePermissionError(error);
+                        }
+                    })
+                    .finally(() => {
+                        // ボタン状態の復元
+                        this.requestButton.disabled = false;
+                        this.requestButton.innerHTML = originalText;
+                    });
             }
             
             handlePermissionGranted(stream) {
+                addDebugLog('権限許可成功 - ストリーム設定開始');
+                
                 this.currentStream = stream;
                 this.video.srcObject = stream;
                 
@@ -493,6 +550,12 @@
                 this.video.setAttribute('autoplay', '');
                 this.video.setAttribute('muted', '');
                 this.video.setAttribute('playsinline', '');
+                this.video.setAttribute('webkit-playsinline', '');
+                
+                // プロパティでも設定
+                this.video.autoplay = true;
+                this.video.muted = true;
+                this.video.playsInline = true;
                 
                 this.videoContainer.style.display = 'block';
                 
@@ -500,6 +563,8 @@
                 const videoTrack = stream.getVideoTracks()[0];
                 if (videoTrack) {
                     const settings = videoTrack.getSettings();
+                    addDebugLog(`ビデオ設定: ${settings.width}x${settings.height}, ${settings.frameRate}fps`);
+                    
                     this.updateStatus(
                         `✅ カメラアクセスが許可されました！<br>` +
                         `<small>解像度: ${settings.width}x${settings.height}, ` +
@@ -526,7 +591,7 @@
                     returnButton.style.display = 'block';
                 }
                 
-                console.log('Camera access granted successfully');
+                addDebugLog('カメラ起動完了');
             }
             
             checkReferrer() {
@@ -536,6 +601,8 @@
                 const referrer = document.referrer;
                 const isFromReportForm = fromForm || referrer.includes('index.html') || referrer.includes('report');
                 
+                addDebugLog(`リファラーチェック: fromForm=${fromForm}, referrer=${referrer}, isFromReportForm=${isFromReportForm}`);
+                
                 if (isFromReportForm) {
                     const returnButton = document.getElementById('returnToForm');
                     if (returnButton) {
@@ -543,7 +610,7 @@
                     }
                     
                     // 説明文を更新
-                    const description = document.querySelector('.description');
+                    const description = document.getElementById('description');
                     if (description) {
                         description.innerHTML = `
                             カメラ機能を使用するには、カメラへのアクセス許可が必要です。<br>
@@ -551,20 +618,27 @@
                             <strong style="color: #4facfe;">📋 通報フォームから移動してきました</strong>
                         `;
                     }
+                    
+                    addDebugLog('通報フォームからの移動を検出 - UI更新完了');
                 }
             }
             
             returnToReportForm() {
+                addDebugLog('通報フォームに戻る処理開始');
+                
                 try {
                     // 元のタブが存在する場合は閉じて元のタブに戻る
                     if (window.opener && !window.opener.closed) {
+                        addDebugLog('元のタブに戻る');
                         window.opener.focus();
                         window.close();
                     } else {
                         // 元のタブがない場合は直接移動
+                        addDebugLog('直接移動');
                         window.location.href = 'index.html';
                     }
                 } catch (error) {
+                    addDebugLog(`通報フォームに戻る際にエラー: ${error.message}`);
                     console.error('通報フォームに戻る際にエラーが発生:', error);
                     // エラーの場合は直接移動
                     window.location.href = 'index.html';
@@ -572,6 +646,8 @@
             }
             
             handlePermissionError(error) {
+                addDebugLog(`権限エラー処理: ${error.name} - ${error.message}`);
+                
                 let message = 'カメラアクセスに失敗しました。';
                 let userGuidance = '';
                 let statusType = 'error';
@@ -616,6 +692,8 @@
             }
             
             stopCamera() {
+                addDebugLog('カメラ停止処理開始');
+                
                 if (this.currentStream) {
                     this.currentStream.getTracks().forEach(track => track.stop());
                     this.currentStream = null;
@@ -625,7 +703,9 @@
                 this.video.srcObject = null;
                 this.updateStatus('📷 カメラが停止されました。', 'info');
                 this.requestButton.textContent = '📷 カメラを開始';
-                this.requestButton.onclick = () => this.requestCameraPermission();
+                this.requestButton.onclick = () => this.requestCameraPermissionDirect();
+                
+                addDebugLog('カメラ停止完了');
             }
             
             updateStatus(message, type) {
@@ -637,11 +717,13 @@
         
         // ページ読み込み完了後に初期化
         document.addEventListener('DOMContentLoaded', () => {
-            window.cameraManager = new EnhancedCameraPermissionManager();
+            addDebugLog('DOMContentLoaded - 初期化開始');
+            window.cameraManager = new SimpleCameraPermissionManager();
         });
         
         // ページ離脱時にカメラストリームを停止
         window.addEventListener('beforeunload', () => {
+            addDebugLog('ページ離脱 - クリーンアップ');
             if (window.cameraManager && window.cameraManager.currentStream) {
                 window.cameraManager.currentStream.getTracks().forEach(track => track.stop());
             }
