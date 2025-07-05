@@ -20,7 +20,7 @@ let currentPhoto = {
 
 let videoStream = null;
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
   // 初期権限チェック
   checkCameraPermissionOnLoad();
 
@@ -198,14 +198,14 @@ document.addEventListener('DOMContentLoaded', function() {
   // === イベントリスナーの設定 ===
 
   // 権限状態確認ボタン
-  checkPermissionButton.addEventListener('click', function(event) {
+  checkPermissionButton.addEventListener('click', function (event) {
     console.log('権限状態確認ボタンクリック');
     event.preventDefault();
     checkCameraPermission();
   });
 
   // 権限要求ボタン
-  requestPermissionButton.addEventListener('click', function(event) {
+  requestPermissionButton.addEventListener('click', function (event) {
     console.log('権限要求ボタンクリック');
     event.preventDefault();
     requestCameraPermission();
@@ -234,10 +234,10 @@ document.addEventListener('DOMContentLoaded', function() {
   // 現在位置の取得
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
-      function(pos) {
+      function (pos) {
         map.setView([pos.coords.latitude, pos.coords.longitude], 18);
       },
-      function(error) {
+      function (error) {
         console.warn('位置情報の取得に失敗しました:', error);
         showNotification('位置情報の取得に失敗しました。手動で位置を調整してください。', 'warning');
       }
@@ -262,7 +262,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // === 写真プレビューと検証 ===
-  photoInput.addEventListener('change', function() {
+  photoInput.addEventListener('change', function () {
     if (this.files && this.files[0]) {
       const file = this.files[0];
 
@@ -281,10 +281,10 @@ document.addEventListener('DOMContentLoaded', function() {
       }
 
       const reader = new FileReader();
-      reader.onload = function(e) {
+      reader.onload = function (e) {
         updatePhoto(e.target.result, file.type);
       };
-      reader.onerror = function() {
+      reader.onerror = function () {
         showNotification('ファイルの読み込みに失敗しました。', 'error');
         updatePhoto(null, null);
       };
@@ -345,12 +345,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 権限要求の実行
     navigator.mediaDevices.getUserMedia(constraints)
-      .then(function(stream) {
+      .then(function (stream) {
         console.log('✅ カメラ権限取得成功!', stream);
         videoStream = stream;
         handleCameraSuccess(stream);
       })
-      .catch(function(error) {
+      .catch(function (error) {
         console.error('❌ カメラ権限取得失敗:', error);
 
         // 背面カメラ指定で再試行
@@ -365,12 +365,12 @@ document.addEventListener('DOMContentLoaded', function() {
           };
 
           navigator.mediaDevices.getUserMedia(fallbackConstraints)
-            .then(function(stream) {
+            .then(function (stream) {
               console.log('✅ 背面カメラで成功!', stream);
               videoStream = stream;
               handleCameraSuccess(stream);
             })
-            .catch(function(fallbackError) {
+            .catch(function (fallbackError) {
               console.error('❌ 背面カメラでも失敗:', fallbackError);
               handleCameraError(fallbackError);
             });
@@ -407,10 +407,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const playPromise = videoElement.play();
     if (playPromise !== undefined) {
       playPromise
-        .then(function() {
+        .then(function () {
           console.log('ビデオ再生成功');
         })
-        .catch(function(playError) {
+        .catch(function (playError) {
           console.warn('ビデオ自動再生失敗:', playError);
           // 自動再生に失敗しても続行
         });
@@ -506,7 +506,7 @@ document.addEventListener('DOMContentLoaded', function() {
         permissionGuideButton.removeEventListener('click', openCameraPermissionGuide);
 
         // 新しいイベントリスナーを追加（ユーザー操作コンテキストを確保）
-        permissionGuideButton.addEventListener('click', function(event) {
+        permissionGuideButton.addEventListener('click', function (event) {
           console.log('=== 詳細設定ガイドボタンクリック ===');
           console.log('イベント詳細:', {
             type: event.type,
@@ -528,10 +528,10 @@ document.addEventListener('DOMContentLoaded', function() {
         console.warn('権限ガイドボタンが見つかりません');
 
         // ボタンが見つからない場合は、少し待ってから再試行
-        setTimeout(function() {
+        setTimeout(function () {
           const retryButton = document.getElementById('open-permission-guide');
           if (retryButton) {
-            retryButton.addEventListener('click', function(event) {
+            retryButton.addEventListener('click', function (event) {
               event.preventDefault();
               event.stopPropagation();
               openCameraPermissionGuide();
@@ -609,7 +609,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // ポップアップが閉じられたときの処理
-    const checkClosed = setInterval(function() {
+    const checkClosed = setInterval(function () {
       try {
         if (permissionWindow.closed) {
           clearInterval(checkClosed);
@@ -672,7 +672,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // カメラを停止し、ビューの状態をリセットする関数
   function stopCamera() {
     if (videoStream) {
-      videoStream.getTracks().forEach(function(track) {
+      videoStream.getTracks().forEach(function (track) {
         track.stop();
       });
       videoStream = null;
@@ -681,7 +681,7 @@ document.addEventListener('DOMContentLoaded', function() {
     cameraModal.classList.add('hidden');
 
     // モーダルを閉じる際に、ビューの状態を次回のためにリセットする
-    setTimeout(function() {
+    setTimeout(function () {
       videoWrapper.classList.remove('hidden');
       cameraErrorView.classList.add('hidden');
       captureButton.classList.remove('hidden');
@@ -691,7 +691,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // === イベントリスナー ===
 
   // 「カメラで撮影」ボタンが押されたらカメラを起動
-  startCameraButton.addEventListener('click', function(event) {
+  startCameraButton.addEventListener('click', function (event) {
     console.log('=== カメラボタンクリック ===');
     console.log('イベント詳細:', {
       type: event.type,
@@ -707,7 +707,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   // 「再試行」ボタンが押されたら、もう一度カメラを起動
-  retryCameraButton.addEventListener('click', function(event) {
+  retryCameraButton.addEventListener('click', function (event) {
     console.log('=== 再試行ボタンクリック ===');
     event.preventDefault();
     event.stopPropagation();
@@ -718,7 +718,7 @@ document.addEventListener('DOMContentLoaded', function() {
   cancelButton.addEventListener('click', stopCamera);
 
   // 「撮影」写真データの処理
-  captureButton.addEventListener('click', function() {
+  captureButton.addEventListener('click', function () {
     canvasElement.width = videoElement.videoWidth;
     canvasElement.height = videoElement.videoHeight;
     const context = canvasElement.getContext('2d');
@@ -733,7 +733,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   // === フォーム送信処理 ===
-  form.addEventListener('submit', function(e) {
+  form.addEventListener('submit', function (e) {
     e.preventDefault();
 
     // 二重送信防止
@@ -835,7 +835,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
       // タイムアウト付きfetch
       const controller = new AbortController();
-      const timeoutId = setTimeout(function() {
+      const timeoutId = setTimeout(function () {
         controller.abort();
       }, CONFIG.REQUEST_TIMEOUT);
 
@@ -879,7 +879,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (attempt < CONFIG.MAX_RETRY_ATTEMPTS && shouldRetry(error)) {
         showNotification(`送信に失敗しました。${CONFIG.RETRY_DELAY / 1000}秒後に再試行します... (${attempt}/${CONFIG.MAX_RETRY_ATTEMPTS})`, 'warning');
 
-        await new Promise(function(resolve) {
+        await new Promise(function (resolve) {
           setTimeout(resolve, CONFIG.RETRY_DELAY);
         });
         return sendDataWithRetry(formData, photoData, photoMimeType, attempt + 1);
@@ -1001,7 +1001,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.body.appendChild(notification);
 
     // 5秒後に自動削除
-    setTimeout(function() {
+    setTimeout(function () {
       if (notification.parentNode) {
         notification.remove();
       }
@@ -1009,9 +1009,9 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // ページ離脱時のクリーンアップ
-  window.addEventListener('beforeunload', function() {
+  window.addEventListener('beforeunload', function () {
     if (videoStream) {
-      videoStream.getTracks().forEach(function(track) {
+      videoStream.getTracks().forEach(function (track) {
         track.stop();
       });
     }
