@@ -334,89 +334,173 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // カメラアクセス拒否の場合、権限ガイドページを開くボタンのイベントリスナーを追加
     if (showPermissionPage) {
-      setTimeout(function() {
-        const permissionGuideButton = document.getElementById('open-permission-guide');
-        if (permissionGuideButton) {
-          permissionGuideButton.addEventListener('click', function() {
-            openCameraPermissionGuide();
+      // setTimeoutを使わず、即座にイベントリスナーを設定
+      const permissionGuideButton = document.getElementById('open-permission-guide');
+      if (permissionGuideButton) {
+        // 既存のイベントリスナーを削除
+        permissionGuideButton.removeEventListener('click', openCameraPermissionGuide);
+
+        // 新しいイベントリスナーを追加（ユーザー操作コンテキストを確保）
+        permissionGuideButton.addEventListener('click', function(event) {
+          console.log('=== 詳細設定ガイドボタンクリック ===');
+          console.log('イベント詳細:', {
+            type: event.type,
+            isTrusted: event.isTrusted,
+            timeStamp: event.timeStamp
           });
-        }
-      }, 100);
+
+          // イベントの伝播を停止
+          event.preventDefault();
+          event.stopPropagation();
+          event.stopImmediatePropagation();
+
+          // 即座にポップアップを開く（ユーザー操作の直後）
+          openCameraPermissionGuide();
+        }, { once: false, passive: false });
+
+        console.log('権限ガイドボタンのイベントリスナーを設定しました');
+      } else {
+        console.warn('権限ガイドボタンが見つかりません');
+
+        // ボタンが見つからない場合は、少し待ってから再試行
+        setTimeout(function() {
+          const retryButton = document.getElementById('open-permission-guide');
+          if (retryButton) {
+            retryButton.addEventListener('click', function(event) {
+              event.preventDefault();
+              event.stopPropagation();
+              openCameraPermissionGuide();
+            });
+            console.log('権限ガイドボタンのイベントリスナーを再設定しました');
+          }
+        }, 50);
+      }
     }
   }
 
   // カメラ権限ガイドページをポップアップウィンドウで開く関数
   function openCameraPermissionGuide() {
+    console.log('=== ポップアップウィンドウ開始処理 ===');
+
     try {
       // ポップアップウィンドウのサイズと位置を計算
       const popupWidth = 480;
       const popupHeight = 700;
-      const screenWidth = window.screen.width;
-      const screenHeight = window.screen.height;
-      const left = (screenWidth - popupWidth) / 2;
-      const top = (screenHeight - popupHeight) / 2;
+      const screenWidth = window.screen.availWidth || window.screen.width;
+      const screenHeight = window.screen.availHeight || window.screen.height;
+      const left = Math.max(0, (screenWidth - popupWidth) / 2);
+      const top = Math.max(0, (screenHeight - popupHeight) / 2);
 
-      // ポップアップウィンドウの設定
+      // ポップアップウィンドウの設定（最小限の設定で確実に開く）
       const popupFeatures = [
         `width=${popupWidth}`,
         `height=${popupHeight}`,
         `left=${left}`,
         `top=${top}`,
         'resizable=yes',
-        'scrollbars=yes',
-        'status=no',
-        'menubar=no',
-        'toolbar=no',
-        'location=no',
-        'directories=no'
+        'scrollbars=yes'
       ].join(',');
 
-      console.log('ポップアップウィンドウを開く:', {
+      console.log('ポップアップ設定:', {
         url: 'basic_camera_permission.html?from=report-form',
-        features: popupFeatures
+        features: popupFeatures,
+        screenSize: `${screenWidth}x${screenHeight}`,
+        position: `${left},${top}`
       });
 
+      // 即座にポップアップを開く（ユーザー操作コンテキスト内で実行）
       const permissionWindow = window.open(
         'basic_camera_permission.html?from=report-form',
         'cameraPermissionGuide',
         popupFeatures
       );
 
-      if (!permissionWindow) {
-        showNotification('ポップアップがブロックされました。ブラウザの設定でポップアップを許可してください。', 'warning');
+      console.log('window.open実行結果:', permissionWindow);
 
-        // ポップアップがブロックされた場合の代替手段
-        setTimeout(function() {
-          if (confirm('ポップアップがブロックされました。\nカメラ権限設定ガイドページに移動しますか？\n（このページから離れます）')) {
-            window.location.href = 'basic_camera_permission.html?from=report-form';
-          }
-        }, 1000);
+      // ポップアップの状態を確認
+      if (!permissionWindow || permissionWindow.closed) {
+        console.warn('ポップアップがブロックされました');
+        handlePopupBlocked();
       } else {
-        // ポップアップが正常に開いた場合
-        showNotification('カメラ権限設定ガイドをポップアップで開きました', 'success');
-
-        // ポップアップにフォーカスを当てる
-        permissionWindow.focus();
-
-        // ポップアップが閉じられたときの処理
-        const checkClosed = setInterval(function() {
-          if (permissionWindow.closed) {
-            clearInterval(checkClosed);
-            console.log('ポップアップウィンドウが閉じられました');
-            showNotification('設定ガイドが閉じられました。カメラ機能を再度お試しください。', 'info');
-          }
-        }, 1000);
-
-        // モーダルを閉じる
-        stopCamera();
+        console.log('ポップアップが正常に開きました');
+        handlePopupSuccess(permissionWindow);
       }
+
     } catch (error) {
-      console.error('ポップアップウィンドウを開く際にエラーが発生:', error);
+      console.error('ポップアップ開始処理でエラー:', error);
+      handlePopupError(error);
+    }
+  }
 
-      // エラーの場合は現在のページでリダイレクト
-      if (confirm('ポップアップの表示に失敗しました。\nカメラ権限設定ガイドページに移動しますか？\n（このページから離れます）')) {
-        window.location.href = 'basic_camera_permission.html?from=report-form';
+  // ポップアップが正常に開いた場合の処理
+  function handlePopupSuccess(permissionWindow) {
+    showNotification('カメラ権限設定ガイドをポップアップで開きました', 'success');
+
+    // ポップアップにフォーカスを当てる
+    try {
+      permissionWindow.focus();
+    } catch (focusError) {
+      console.warn('ポップアップフォーカスエラー:', focusError);
+    }
+
+    // ポップアップが閉じられたときの処理
+    const checkClosed = setInterval(function() {
+      try {
+        if (permissionWindow.closed) {
+          clearInterval(checkClosed);
+          console.log('ポップアップウィンドウが閉じられました');
+          showNotification('設定ガイドが閉じられました。カメラ機能を再度お試しください。', 'info');
+        }
+      } catch (checkError) {
+        // クロスオリジンエラーなどを無視
+        clearInterval(checkClosed);
       }
+    }, 1000);
+
+    // モーダルを閉じる
+    stopCamera();
+  }
+
+  // ポップアップがブロックされた場合の処理
+  function handlePopupBlocked() {
+    console.log('ポップアップブロック対策を実行');
+
+    showNotification('ポップアップがブロックされました。ブラウザの設定でポップアップを許可してください。', 'warning');
+
+    // ユーザーに選択肢を提示
+    const userChoice = confirm(
+      'ポップアップがブロックされました。\n\n' +
+      '対処法:\n' +
+      '1. ブラウザのアドレスバーにあるポップアップブロックアイコンをクリックして許可\n' +
+      '2. 「OK」を押してカメラ権限設定ページに移動\n' +
+      '3. 「キャンセル」を押して現在のページに留まる\n\n' +
+      'カメラ権限設定ページに移動しますか？'
+    );
+
+    if (userChoice) {
+      console.log('ユーザーが移動を選択');
+      window.location.href = 'basic_camera_permission.html?from=report-form';
+    } else {
+      console.log('ユーザーが現在のページに留まることを選択');
+      showNotification('ブラウザの設定でポップアップを許可してから再度お試しください。', 'info');
+    }
+  }
+
+  // ポップアップエラー時の処理
+  function handlePopupError(error) {
+    console.error('ポップアップエラー詳細:', error);
+
+    showNotification('ポップアップの表示に失敗しました。', 'error');
+
+    // エラーの場合も移動の選択肢を提示
+    const userChoice = confirm(
+      'ポップアップの表示に失敗しました。\n\n' +
+      'カメラ権限設定ページに移動しますか？\n' +
+      '（このページから離れます）'
+    );
+
+    if (userChoice) {
+      window.location.href = 'basic_camera_permission.html?from=report-form';
     }
   }
 
