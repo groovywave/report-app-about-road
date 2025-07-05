@@ -253,6 +253,10 @@
             🔍 権限状態を確認
         </button>
         
+        <button id="returnToForm" class="button secondary-button" style="display: none;">
+            ↩️ 通報フォームに戻る
+        </button>
+        
         <div id="status" class="status"></div>
         
         <div class="video-container" id="videoContainer">
@@ -314,10 +318,21 @@
                     this.checkPermissionStatus();
                 });
                 
+                // 通報フォームに戻るボタンの設定
+                const returnButton = document.getElementById('returnToForm');
+                if (returnButton) {
+                    returnButton.addEventListener('click', () => {
+                        this.returnToReportForm();
+                    });
+                }
+                
                 // 初期化処理
                 this.updateDeviceInfo();
                 this.checkEnvironment();
                 this.checkPermissionStatus();
+                
+                // URLパラメータをチェックして、通報フォームから来た場合は戻るボタンを表示
+                this.checkReferrer();
             }
             
             updateDeviceInfo() {
@@ -488,17 +503,72 @@
                     this.updateStatus(
                         `✅ カメラアクセスが許可されました！<br>` +
                         `<small>解像度: ${settings.width}x${settings.height}, ` +
-                        `フレームレート: ${settings.frameRate}fps</small>`, 
+                        `フレームレート: ${settings.frameRate}fps</small><br><br>` +
+                        `<strong>🎉 設定完了！</strong><br>` +
+                        `通報フォームでカメラ機能が使用できるようになりました。`, 
                         'success'
                     );
                 } else {
-                    this.updateStatus('✅ カメラアクセスが許可されました！', 'success');
+                    this.updateStatus(
+                        '✅ カメラアクセスが許可されました！<br><br>' +
+                        '<strong>🎉 設定完了！</strong><br>' +
+                        '通報フォームでカメラ機能が使用できるようになりました。', 
+                        'success'
+                    );
                 }
                 
                 this.requestButton.textContent = '📷 カメラを停止';
                 this.requestButton.onclick = () => this.stopCamera();
                 
+                // 通報フォームに戻るボタンを表示
+                const returnButton = document.getElementById('returnToForm');
+                if (returnButton) {
+                    returnButton.style.display = 'block';
+                }
+                
                 console.log('Camera access granted successfully');
+            }
+            
+            checkReferrer() {
+                // リファラーまたはURLパラメータで通報フォームから来たかチェック
+                const urlParams = new URLSearchParams(window.location.search);
+                const fromForm = urlParams.get('from') === 'report-form';
+                const referrer = document.referrer;
+                const isFromReportForm = fromForm || referrer.includes('index.html') || referrer.includes('report');
+                
+                if (isFromReportForm) {
+                    const returnButton = document.getElementById('returnToForm');
+                    if (returnButton) {
+                        returnButton.style.display = 'block';
+                    }
+                    
+                    // 説明文を更新
+                    const description = document.querySelector('.description');
+                    if (description) {
+                        description.innerHTML = `
+                            カメラ機能を使用するには、カメラへのアクセス許可が必要です。<br>
+                            ブラウザから権限要求が表示されたら「許可」を選択してください。<br><br>
+                            <strong style="color: #4facfe;">📋 通報フォームから移動してきました</strong>
+                        `;
+                    }
+                }
+            }
+            
+            returnToReportForm() {
+                try {
+                    // 元のタブが存在する場合は閉じて元のタブに戻る
+                    if (window.opener && !window.opener.closed) {
+                        window.opener.focus();
+                        window.close();
+                    } else {
+                        // 元のタブがない場合は直接移動
+                        window.location.href = 'index.html';
+                    }
+                } catch (error) {
+                    console.error('通報フォームに戻る際にエラーが発生:', error);
+                    // エラーの場合は直接移動
+                    window.location.href = 'index.html';
+                }
             }
             
             handlePermissionError(error) {

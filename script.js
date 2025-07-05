@@ -21,6 +21,9 @@ let currentPhoto = {
 let videoStream = null;
 
 document.addEventListener('DOMContentLoaded', function() {
+  // 初期権限チェック
+  checkCameraPermissionOnLoad();
+
   // === 要素の取得 ===
   const map = L.map('map').setView([36.871, 140.016], 16);
   const coordsDisplay = document.getElementById('coords-display');
@@ -134,6 +137,28 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // === カメラ撮影のロジック ===
 
+  // ページ読み込み時にカメラ権限をチェックする関数
+  async function checkCameraPermissionOnLoad() {
+    try {
+      if (navigator.permissions) {
+        const permission = await navigator.permissions.query({ name: 'camera' });
+        console.log('初期カメラ権限状態:', permission.state);
+
+        if (permission.state === 'denied') {
+          // 権限が拒否されている場合は、カメラボタンに警告を表示
+          const cameraButton = document.getElementById('start-camera-btn');
+          if (cameraButton) {
+            cameraButton.innerHTML = '<i class="fas fa-exclamation-triangle"></i> カメラ権限が必要';
+            cameraButton.style.background = 'linear-gradient(135deg, #ffc107 0%, #ff8c00 100%)';
+            cameraButton.title = 'カメラ権限が拒否されています。クリックして設定方法を確認してください。';
+          }
+        }
+      }
+    } catch (error) {
+      console.log('権限チェックでエラー:', error);
+    }
+  }
+
   // カメラ起動処理を独立した関数にまとめる
   async function startCamera() {
     console.log('カメラ起動処理を開始');
@@ -211,6 +236,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // エラーの種類に応じてユーザーへのメッセージを変える
     let message = 'カメラの起動に失敗しました。';
     let guidance = '';
+    let showPermissionPage = false;
 
     if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
       message = 'カメラへのアクセスが拒否されました。';
@@ -221,8 +247,22 @@ document.addEventListener('DOMContentLoaded', function() {
         3. ページを再読み込み<br><br>
         <strong>または設定から:</strong><br>
         • Android: 設定 → アプリ → ブラウザ → 権限 → カメラ → 許可<br>
-        • iPhone: 設定 → Safari → カメラ → 許可
+        • iPhone: 設定 → Safari → カメラ → 許可<br><br>
+        <div style="margin-top: 16px;">
+          <button id="open-permission-guide" style="
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+          ">📱 詳細な設定ガイドを開く</button>
+        </div>
       `;
+      showPermissionPage = true;
     } else if (err.name === 'NotFoundError' || err.name === 'DeviceNotFoundError') {
       message = '利用可能なカメラが見つかりませんでした。';
       guidance = 'デバイスにカメラが接続されているか確認してください。';
@@ -263,6 +303,48 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 通知も表示
     showNotification(message, 'error');
+
+    // カメラアクセス拒否の場合、権限ガイドページを開くボタンのイベントリスナーを追加
+    if (showPermissionPage) {
+      setTimeout(() => {
+        const permissionGuideButton = document.getElementById('open-permission-guide');
+        if (permissionGuideButton) {
+          permissionGuideButton.addEventListener('click', () => {
+            openCameraPermissionGuide();
+          });
+        }
+      }, 100);
+    }
+  }
+
+  // カメラ権限ガイドページを開く関数
+  function openCameraPermissionGuide() {
+    try {
+      // URLパラメータを付けて新しいタブでbasic_camera_permission.htmlを開く
+      const permissionWindow = window.open('basic_camera_permission.html?from=report-form', '_blank');
+
+      if (!permissionWindow) {
+        // ポップアップがブロックされた場合の代替手段
+        showNotification('ポップアップがブロックされました。手動でbasic_camera_permission.htmlを開いてください。', 'warning');
+
+        // 現在のページでリダイレクトするかユーザーに確認
+        if (confirm('カメラ権限設定ガイドページに移動しますか？\n（このページから離れます）')) {
+          window.location.href = 'basic_camera_permission.html?from=report-form';
+        }
+      } else {
+        showNotification('カメラ権限設定ガイドを新しいタブで開きました', 'success');
+
+        // モーダルを閉じる
+        stopCamera();
+      }
+    } catch (error) {
+      console.error('権限ガイドページを開く際にエラーが発生:', error);
+
+      // エラーの場合は現在のページでリダイレクト
+      if (confirm('カメラ権限設定ガイドページに移動しますか？\n（このページから離れます）')) {
+        window.location.href = 'basic_camera_permission.html?from=report-form';
+      }
+    }
   }
 
   // カメラを停止し、ビューの状態をリセットする関数
