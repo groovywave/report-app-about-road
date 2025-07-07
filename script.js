@@ -1,7 +1,7 @@
 // script.js
 
 // ▼▼▼【重要】あなたのGASウェブアプリのURLに書き換えてください ▼▼▼
-const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxKAy4Ar6dDJuwvSIrCdYbx2684YemkDClYGYb4ptxbYmMwlWQvWU6i9xHkzaun-8RaHg/exec';
+const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxCY9Ci4BtwrfNAG5rLT1uEAshgS3Eeuva8NHmvbY30OVAg-OiwtCDI58ed51FWbpTtew/exec';
 // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
 // 設定
