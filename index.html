@@ -7,10 +7,6 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 <link rel="stylesheet" href="style.css" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-
-<!-- LIFF SDKを読み込むスクリプト -->
-<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-
 </head>
 <body>
 
@@ -35,6 +31,7 @@
                 </div>
             </div>
             
+            <!-- 権限状態表示エリア（最初から表示） -->
             <div id="permission-status" class="permission-status checking">
                 <span class="permission-status-icon"><i class="fas fa-spinner"></i></span>
                 <span>🔍 権限状態を確認中...</span>
@@ -103,9 +100,6 @@
             <input type="hidden" id="longitude" name="longitude" required>
         </div>
         
-        <!-- LINEユーザーIDを格納する隠しフィールド -->
-        <input type="hidden" id="userId" name="userId">
-        
         <button type="submit" id="btn-submit">この内容で通報する</button>
     </form>
 </div>
@@ -114,16 +108,22 @@
 <div id="camera-modal" class="modal-overlay hidden">
     <div class="modal-content">
         <h2>カメラ撮影</h2>
+
+        <!-- カメラ映像を表示するビュー -->
         <div id="video-wrapper">
             <video id="camera-stream" playsinline autoplay muted></video>
             <canvas id="camera-canvas" style="display: none;"></canvas>
         </div>
+
+        <!-- エラーメッセージと再試行ボタンを表示するビュー -->
         <div id="camera-error-view" class="hidden">
             <p id="camera-error-text"></p>
             <button type="button" id="retry-camera-btn" class="button-primary">
                 <i class="fas fa-sync-alt"></i> 再試行
             </button>
         </div>
+
+        <!-- 操作ボタンエリア -->
         <div class="modal-controls">
             <button type="button" id="capture-btn" class="button-primary">
                 <i class="fas fa-camera-retro"></i> 撮影
@@ -136,37 +136,8 @@
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-
-<!-- LIFF初期化とユーザーID取得のためのスクリプト -->
-<script>
-// --- 設定項目：ご自身のLIFF IDに書き換えてください ---
-const LIFF_ID = "YOUR_LIFF_ID"; 
-// --- 設定はここまで ---
-
-/**
- * LIFFを初期化し、ユーザーIDをフォームの隠しフィールドに設定する関数
- */
-async function initializeLiff() {
-  try {
-    await liff.init({ liffId: LIFF_ID });
-    if (!liff.isLoggedIn()) {
-      liff.login();
-    } else {
-      const userId = liff.getUserId();
-      // 隠しフィールドにユーザーIDを設定。これでscript.jsから参照できる。
-      document.getElementById('userId').value = userId;
-      console.log('LIFF: ユーザーIDを取得し、フォームに設定しました。');
-    }
-  } catch (e) {
-    console.error('LIFF Initialization failed', e);
-    alert('ページの初期化に失敗しました。LINEアプリ内でページを開いているか確認し、開き直してください。');
-  }
-}
-
-// ページの読み込みが完了したらLIFFの初期化処理を実行
-window.addEventListener('load', initializeLiff);
-</script>
-
 <script src="script.js"></script>
 </body>
 </html>
+
+
