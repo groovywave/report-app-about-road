@@ -1,7 +1,7 @@
 // script.js - LINE連携対応版
 
 // ▼▼▼【重要】あなたのGASウェブアプリのURLに書き換えてください ▼▼▼
-const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/YOUR_GAS_WEBAPP_URL/exec';
+const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyN04RxTUnZa5M8qoKDL34i5gSyFRyAZ9w3zXkU-jMSwJj5FcP6X5TyRlP7j6rxNf4jSg/exec';
 // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
 // 設定
