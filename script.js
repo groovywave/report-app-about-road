@@ -1,7 +1,7 @@
-// script.js
+// script.js - LINE連携対応版
 
 // ▼▼▼【重要】あなたのGASウェブアプリのURLに書き換えてください ▼▼▼
-const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxLnDmU6OFr2QZJ1-sBiJM_cn8q07A64BLFAn75a2LNaRDuiLPr5iXzXWpsxq0lvTiJ5A/exec';
+const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/YOUR_GAS_WEBAPP_URL/exec';
 // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
 // 設定
@@ -19,8 +19,18 @@ let currentPhoto = {
 };
 
 let videoStream = null;
+let userInfo = {
+  userId: null,
+  source: null
+};
 
 document.addEventListener('DOMContentLoaded', function() {
+  // URLパラメータからユーザー情報を取得
+  extractUserInfoFromUrl();
+
+  // LINE環境の検出
+  detectLineEnvironment();
+
   // === 要素の取得 ===
   const map = L.map('map').setView([36.871, 140.016], 16);
   const coordsDisplay = document.getElementById('coords-display');
@@ -52,6 +62,68 @@ document.addEventListener('DOMContentLoaded', function() {
     // 初期状態ではカメラボタンを非表示にする（権限確認後に表示制御）
     startCameraButton.style.display = 'none';
     console.log('カメラボタンを初期状態で非表示に設定しました');
+  }
+
+  // === URLパラメータからユーザー情報を取得 ===
+  function extractUserInfoFromUrl() {
+    const urlParams = new URLSearchParams(window.location.search);
+
+    // ユーザーIDの取得
+    userInfo.userId = urlParams.get('userId') || urlParams.get('user_id') || null;
+    userInfo.source = urlParams.get('source') || 'web';
+
+    console.log('ユーザー情報:', userInfo);
+
+    if (userInfo.userId) {
+      showNotification('LINEからのアクセスを確認しました。', 'info');
+    }
+  }
+
+  // === LINE環境の検出 ===
+  function detectLineEnvironment() {
+    const userAgent = navigator.userAgent;
+    const isLine = userAgent.includes('Line/');
+    const isLineInApp = userAgent.includes('Line/') && userAgent.includes('Mobile');
+
+    if (isLine) {
+      console.log('LINE環境で実行中');
+      document.body.classList.add('line-environment');
+
+      // LINE環境での最適化
+      optimizeForLineEnvironment();
+    }
+  }
+
+  // === LINE環境での最適化 ===
+  function optimizeForLineEnvironment() {
+    // フォントサイズの調整
+    document.documentElement.style.setProperty('--base-font-size', '16px');
+
+    // タップ領域の拡大
+    const buttons = document.querySelectorAll('button, .radio-item');
+    buttons.forEach(button => {
+      button.style.minHeight = '48px';
+    });
+
+    // 戻るボタンの追加（必要に応じて）
+    addBackToLineButton();
+  }
+
+  // === LINEに戻るボタンの追加 ===
+  function addBackToLineButton() {
+    if (userInfo.source === 'line' && userInfo.userId) {
+      const backButton = document.createElement('div');
+      backButton.className = 'back-to-line-button';
+      backButton.innerHTML = `
+        <button type="button" onclick="window.close()" class="line-back-button">
+          <i class="fas fa-arrow-left"></i> LINEに戻る
+        </button>
+      `;
+
+      // フォームの上部に挿入
+      const container = document.querySelector('.container');
+      container.insertBefore(backButton, container.firstChild);
+    }
   }
 
   // === カメラ権限管理機能 ===
@@ -95,8 +167,6 @@ document.addEventListener('DOMContentLoaded', function() {
         ${iconHTML}
         <span>${statusMessage}</span>
       `;
-
-      // 権限状態表示エリアは最初から表示されているため、hiddenクラスの操作は不要
     }
 
     // カメラボタンの表示制御
@@ -109,16 +179,12 @@ document.addEventListener('DOMContentLoaded', function() {
   function updateCameraButtonVisibility(permissionState) {
     if (startCameraButton) {
       if (permissionState === 'granted') {
-        // 権限が許可されている場合はカメラボタンを表示
         startCameraButton.style.display = 'block';
         console.log('カメラボタンを表示しました');
       } else {
-        // 権限が許可されていない場合はカメラボタンを非表示
         startCameraButton.style.display = 'none';
         console.log('カメラボタンを非表示にしました');
       }
-    } else {
-      console.warn('カメラボタン要素が見つかりません');
     }
   }
 
@@ -129,19 +195,16 @@ document.addEventListener('DOMContentLoaded', function() {
     updatePermissionStatus('checking', '権限状態を確認中...');
 
     try {
-      // 基本的な環境チェック
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         updatePermissionStatus('error', 'このブラウザではカメラAPIがサポートされていません');
         return 'unsupported';
       }
 
-      // HTTPS接続チェック
       if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
         updatePermissionStatus('error', 'カメラアクセスにはHTTPS接続が必要です');
         return 'https_required';
       }
 
-      // Permission APIで権限状態を確認
       if (navigator.permissions) {
         const permission = await navigator.permissions.query({ name: 'camera' });
         const state = permission.state;
@@ -193,7 +256,6 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
 
-    // ボタンを無効化
     requestPermissionButton.disabled = true;
     const originalHTML = requestPermissionButton.innerHTML;
     requestPermissionButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 権限要求中...';
@@ -201,7 +263,6 @@ document.addEventListener('DOMContentLoaded', function() {
     updatePermissionStatus('checking', '📷 カメラ権限を要求しています...');
 
     try {
-      // 最もシンプルな制約で権限要求
       const constraints = {
         video: true,
         audio: false
@@ -213,16 +274,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
       console.log('✅ カメラ権限取得成功!', stream);
 
-      // ストリームを即座に停止（テスト目的のため）
       stream.getTracks().forEach(track => track.stop());
 
       updatePermissionStatus('granted', 'カメラ権限が正常に設定されました！');
       requestPermissionButton.innerHTML = '<i class="fas fa-camera"></i> カメラをテスト';
 
-      // 成功通知
       showNotification('カメラ権限が正常に設定されました。写真撮影機能が利用可能です。', 'success');
 
-      // カメラボタンを表示（updatePermissionStatusで自動的に制御される）
       console.log('権限取得成功 - カメラボタンが表示されます');
 
       return 'granted';
@@ -259,7 +317,6 @@ document.addEventListener('DOMContentLoaded', function() {
       return 'denied';
 
     } finally {
-      // ボタンを有効化
       requestPermissionButton.disabled = false;
       requestPermissionButton.innerHTML = originalHTML;
     }
@@ -333,14 +390,12 @@ document.addEventListener('DOMContentLoaded', function() {
     if (this.files && this.files[0]) {
       const file = this.files[0];
 
-      // ファイルサイズチェック
       if (file.size > CONFIG.MAX_FILE_SIZE) {
         showNotification('ファイルサイズが大きすぎます。5MB以下のファイルを選択してください。', 'error');
         updatePhoto(null, null);
         return;
       }
 
-      // ファイル形式チェック
       if (!CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) {
         showNotification('対応していないファイル形式です。JPEG、PNG、GIF、WebPファイルを選択してください。', 'error');
         updatePhoto(null, null);
@@ -361,18 +416,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // === カメラ撮影のロジック ===
 
-  // カメラ起動処理 - 最もシンプルで確実な実装
   function startCamera() {
     console.log('=== カメラ起動処理開始 ===');
 
-    // 基本的な環境チェック
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       console.error('MediaDevices API not supported');
       handleCameraError(new Error('このブラウザではカメラAPIがサポートされていません'));
       return;
     }
 
-    // HTTPS接続チェック
     if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
       console.error('HTTPS connection required');
       handleCameraError(new Error('カメラアクセスにはHTTPS接続が必要です'));
@@ -381,7 +433,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     console.log('環境チェック完了 - getUserMediaを実行');
 
-    // 最もシンプルな制約で権限要求
     const constraints = {
       video: true,
       audio: false
@@ -389,7 +440,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     console.log('getUserMedia実行中...', constraints);
 
-    // 権限要求の実行
     navigator.mediaDevices.getUserMedia(constraints)
       .then(function(stream) {
         console.log('✅ カメラ権限取得成功!', stream);
@@ -399,7 +449,6 @@ document.addEventListener('DOMContentLoaded', function() {
       .catch(function(error) {
         console.error('❌ カメラ権限取得失敗:', error);
 
-        // 背面カメラ指定で再試行
         if (error.name !== 'NotAllowedError' && error.name !== 'PermissionDeniedError') {
           console.log('背面カメラ指定で再試行...');
 
@@ -426,30 +475,23 @@ document.addEventListener('DOMContentLoaded', function() {
       });
   }
 
-  // カメラ成功時の処理
   function handleCameraSuccess(stream) {
     console.log('カメラストリーム取得成功 - UI更新開始');
 
-    // UIの更新
     videoWrapper.classList.remove('hidden');
     cameraErrorView.classList.add('hidden');
     captureButton.classList.remove('hidden');
 
-    // ビデオ要素にストリームを設定
     videoElement.srcObject = stream;
-
-    // 必要な属性を設定
     videoElement.autoplay = true;
     videoElement.muted = true;
     videoElement.playsInline = true;
 
-    // iOS Safari対応
     videoElement.setAttribute('autoplay', 'true');
     videoElement.setAttribute('muted', 'true');
     videoElement.setAttribute('playsinline', 'true');
     videoElement.setAttribute('webkit-playsinline', 'true');
 
-    // ビデオの再生
     const playPromise = videoElement.play();
     if (playPromise !== undefined) {
       playPromise
@@ -458,24 +500,20 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(function(playError) {
           console.warn('ビデオ自動再生失敗:', playError);
-          // 自動再生に失敗しても続行
         });
     }
 
-    // モーダルを開く
     cameraModal.classList.remove('hidden');
     showNotification('カメラが起動しました', 'success');
 
     console.log('カメラ起動完了');
   }
 
-  // カメラエラー処理
   function handleCameraError(err) {
     console.error('カメラの起動に失敗:', err);
 
     let message = 'カメラの起動に失敗しました。';
     let guidance = '';
-    let showPermissionPage = false;
 
     if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
       message = 'カメラへのアクセスが拒否されました。';
@@ -486,46 +524,19 @@ document.addEventListener('DOMContentLoaded', function() {
         3. ページを再読み込み<br><br>
         <strong>または設定から:</strong><br>
         • Android: 設定 → アプリ → ブラウザ → 権限 → カメラ → 許可<br>
-        • iPhone: 設定 → Safari → カメラ → 許可<br><br>
-        <div style="margin-top: 16px;">
-          <button id="open-permission-guide" style="
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 12px 20px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
-          ">📱 詳細な設定ガイドを開く</button>
-        </div>
+        • iPhone: 設定 → Safari → カメラ → 許可
       `;
-      showPermissionPage = true;
     } else if (err.name === 'NotFoundError' || err.name === 'DeviceNotFoundError') {
       message = '利用可能なカメラが見つかりませんでした。';
       guidance = 'デバイスにカメラが接続されているか確認してください。';
     } else if (err.name === 'NotReadableError') {
       message = 'カメラが他のアプリケーションで使用中です。';
       guidance = '他のアプリ（Zoom、Skype、カメラアプリ等）を終了してから再試行してください。';
-    } else if (err.name === 'OverconstrainedError') {
-      message = 'カメラの設定に問題があります。';
-      guidance = '要求されたカメラ設定がサポートされていません。';
-    } else if (err.name === 'SecurityError') {
-      message = 'セキュリティエラーが発生しました。';
-      guidance = 'HTTPS接続が必要です。';
-    } else if (err.message && err.message.includes('HTTPS')) {
-      message = 'HTTPS接続が必要です。';
-      guidance = 'カメラ機能を使用するには、HTTPS接続でアクセスしてください。';
-    } else if (err.message && err.message.includes('サポート')) {
-      message = 'このブラウザではカメラ機能がサポートされていません。';
-      guidance = '最新のChrome、Safari、Firefoxをご使用ください。';
     } else {
       message = `エラーが発生しました: ${err.message}`;
       guidance = 'ページを再読み込みして再試行してください。';
     }
 
-    // エラー用のビューを表示
     cameraErrorText.innerHTML = `
       <div style="text-align: left;">
         <p style="font-weight: bold; color: #dc3545; margin-bottom: 12px;">${message}</p>
@@ -537,185 +548,10 @@ document.addEventListener('DOMContentLoaded', function() {
     cameraErrorView.classList.remove('hidden');
     captureButton.classList.add('hidden');
 
-    // エラーでもモーダルは表示する
     cameraModal.classList.remove('hidden');
-
-    // 通知も表示
     showNotification(message, 'error');
-
-    // カメラアクセス拒否の場合、権限ガイドページを開くボタンのイベントリスナーを追加
-    if (showPermissionPage) {
-      // setTimeoutを使わず、即座にイベントリスナーを設定
-      const permissionGuideButton = document.getElementById('open-permission-guide');
-      if (permissionGuideButton) {
-        // 既存のイベントリスナーを削除
-        permissionGuideButton.removeEventListener('click', openCameraPermissionGuide);
-
-        // 新しいイベントリスナーを追加（ユーザー操作コンテキストを確保）
-        permissionGuideButton.addEventListener('click', function(event) {
-          console.log('=== 詳細設定ガイドボタンクリック ===');
-          console.log('イベント詳細:', {
-            type: event.type,
-            isTrusted: event.isTrusted,
-            timeStamp: event.timeStamp
-          });
-
-          // イベントの伝播を停止
-          event.preventDefault();
-          event.stopPropagation();
-          event.stopImmediatePropagation();
-
-          // 即座にポップアップを開く（ユーザー操作の直後）
-          openCameraPermissionGuide();
-        }, { once: false, passive: false });
-
-        console.log('権限ガイドボタンのイベントリスナーを設定しました');
-      } else {
-        console.warn('権限ガイドボタンが見つかりません');
-
-        // ボタンが見つからない場合は、少し待ってから再試行
-        setTimeout(function() {
-          const retryButton = document.getElementById('open-permission-guide');
-          if (retryButton) {
-            retryButton.addEventListener('click', function(event) {
-              event.preventDefault();
-              event.stopPropagation();
-              openCameraPermissionGuide();
-            });
-            console.log('権限ガイドボタンのイベントリスナーを再設定しました');
-          }
-        }, 50);
-      }
-    }
   }
 
-  // カメラ権限ガイドページをポップアップウィンドウで開く関数
-  function openCameraPermissionGuide() {
-    console.log('=== ポップアップウィンドウ開始処理 ===');
-
-    try {
-      // ポップアップウィンドウのサイズと位置を計算
-      const popupWidth = 480;
-      const popupHeight = 700;
-      const screenWidth = window.screen.availWidth || window.screen.width;
-      const screenHeight = window.screen.availHeight || window.screen.height;
-      const left = Math.max(0, (screenWidth - popupWidth) / 2);
-      const top = Math.max(0, (screenHeight - popupHeight) / 2);
-
-      // ポップアップウィンドウの設定（最小限の設定で確実に開く）
-      const popupFeatures = [
-        `width=${popupWidth}`,
-        `height=${popupHeight}`,
-        `left=${left}`,
-        `top=${top}`,
-        'resizable=yes',
-        'scrollbars=yes'
-      ].join(',');
-
-      console.log('ポップアップ設定:', {
-        url: 'basic_camera_permission.html?from=report-form',
-        features: popupFeatures,
-        screenSize: `${screenWidth}x${screenHeight}`,
-        position: `${left},${top}`
-      });
-
-      // 即座にポップアップを開く（ユーザー操作コンテキスト内で実行）
-      const permissionWindow = window.open(
-        'basic_camera_permission.html?from=report-form',
-        'cameraPermissionGuide',
-        popupFeatures
-      );
-
-      console.log('window.open実行結果:', permissionWindow);
-
-      // ポップアップの状態を確認
-      if (!permissionWindow || permissionWindow.closed) {
-        console.warn('ポップアップがブロックされました');
-        handlePopupBlocked();
-      } else {
-        console.log('ポップアップが正常に開きました');
-        handlePopupSuccess(permissionWindow);
-      }
-
-    } catch (error) {
-      console.error('ポップアップ開始処理でエラー:', error);
-      handlePopupError(error);
-    }
-  }
-
-  // ポップアップが正常に開いた場合の処理
-  function handlePopupSuccess(permissionWindow) {
-    showNotification('カメラ権限設定ガイドをポップアップで開きました', 'success');
-
-    // ポップアップにフォーカスを当てる
-    try {
-      permissionWindow.focus();
-    } catch (focusError) {
-      console.warn('ポップアップフォーカスエラー:', focusError);
-    }
-
-    // ポップアップが閉じられたときの処理
-    const checkClosed = setInterval(function() {
-      try {
-        if (permissionWindow.closed) {
-          clearInterval(checkClosed);
-          console.log('ポップアップウィンドウが閉じられました');
-          showNotification('設定ガイドが閉じられました。カメラ機能を再度お試しください。', 'info');
-        }
-      } catch (checkError) {
-        // クロスオリジンエラーなどを無視
-        clearInterval(checkClosed);
-      }
-    }, 1000);
-
-    // モーダルを閉じる
-    stopCamera();
-  }
-
-  // ポップアップがブロックされた場合の処理
-  function handlePopupBlocked() {
-    console.log('ポップアップブロック対策を実行');
-
-    showNotification('ポップアップがブロックされました。ブラウザの設定でポップアップを許可してください。', 'warning');
-
-    // ユーザーに選択肢を提示
-    const userChoice = confirm(
-      'ポップアップがブロックされました。\n\n' +
-      '対処法:\n' +
-      '1. ブラウザのアドレスバーにあるポップアップブロックアイコンをクリックして許可\n' +
-      '2. 「OK」を押してカメラ権限設定ページに移動\n' +
-      '3. 「キャンセル」を押して現在のページに留まる\n\n' +
-      'カメラ権限設定ページに移動しますか？'
-    );
-
-    if (userChoice) {
-      console.log('ユーザーが移動を選択');
-      window.location.href = 'basic_camera_permission.html?from=report-form';
-    } else {
-      console.log('ユーザーが現在のページに留まることを選択');
-      showNotification('ブラウザの設定でポップアップを許可してから再度お試しください。', 'info');
-    }
-  }
-
-  // ポップアップエラー時の処理
-  function handlePopupError(error) {
-    console.error('ポップアップエラー詳細:', error);
-
-    showNotification('ポップアップの表示に失敗しました。', 'error');
-
-    // エラーの場合も移動の選択肢を提示
-    const userChoice = confirm(
-      'ポップアップの表示に失敗しました。\n\n' +
-      'カメラ権限設定ページに移動しますか？\n' +
-      '（このページから離れます）'
-    );
-
-    if (userChoice) {
-      window.location.href = 'basic_camera_permission.html?from=report-form';
-    }
-  }
-
-  // カメラを停止し、ビューの状態をリセットする関数
   function stopCamera() {
     if (videoStream) {
       videoStream.getTracks().forEach(function(track) {
@@ -726,7 +562,6 @@ document.addEventListener('DOMContentLoaded', function() {
     videoElement.srcObject = null;
     cameraModal.classList.add('hidden');
 
-    // モーダルを閉じる際に、ビューの状態を次回のためにリセットする
     setTimeout(function() {
       videoWrapper.classList.remove('hidden');
       cameraErrorView.classList.add('hidden');
@@ -736,23 +571,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // === イベントリスナー ===
 
-  // 「カメラで撮影」ボタンが押されたらカメラを起動
   startCameraButton.addEventListener('click', function(event) {
     console.log('=== カメラボタンクリック ===');
-    console.log('イベント詳細:', {
-      type: event.type,
-      isTrusted: event.isTrusted,
-      timeStamp: event.timeStamp
-    });
-
     event.preventDefault();
     event.stopPropagation();
-
-    // 即座にカメラ起動を実行
     startCamera();
   });
 
-  // 「再試行」ボタンが押されたら、もう一度カメラを起動
   retryCameraButton.addEventListener('click', function(event) {
     console.log('=== 再試行ボタンクリック ===');
     event.preventDefault();
@@ -760,10 +585,8 @@ document.addEventListener('DOMContentLoaded', function() {
     startCamera();
   });
 
-  // 「キャンセル」ボタンが押されたらカメラを停止
   cancelButton.addEventListener('click', stopCamera);
 
-  // 「撮影」写真データの処理
   captureButton.addEventListener('click', function() {
     canvasElement.width = videoElement.videoWidth;
     canvasElement.height = videoElement.videoHeight;
@@ -782,7 +605,6 @@ document.addEventListener('DOMContentLoaded', function() {
   form.addEventListener('submit', function(e) {
     e.preventDefault();
 
-    // 二重送信防止
     if (loader.classList.contains('sending')) {
       return;
     }
@@ -794,26 +616,19 @@ document.addEventListener('DOMContentLoaded', function() {
   // フォーム送信の処理
   async function handleFormSubmission(formData) {
     try {
-      // 送信状態の設定
       setSubmissionState(true);
 
-      // フォームデータの検証
       const validationResult = validateFormData(formData);
       if (!validationResult.isValid) {
         throw new Error(validationResult.message);
       }
 
-      // データ送信（リトライ機能付き）
       const result = await sendDataWithRetry(formData, currentPhoto.data, currentPhoto.mimeType);
-
-      // 成功処理
       handleSubmissionSuccess(result);
 
     } catch (error) {
-      // エラー処理
       handleSubmissionError(error);
     } finally {
-      // 送信状態の解除
       setSubmissionState(false);
     }
   }
@@ -824,7 +639,6 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('経度の値:', formData.get('longitude'));
     console.log('通報種別の値:', formData.get('type'));
 
-    // 必須フィールドのチェック
     const requiredFields = [
       { name: 'latitude', label: '場所' },
       { name: 'longitude', label: '場所' },
@@ -845,7 +659,6 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     }
 
-    // 座標の妥当性チェック
     const lat = parseFloat(formData.get('latitude'));
     const lng = parseFloat(formData.get('longitude'));
 
@@ -876,10 +689,11 @@ document.addEventListener('DOMContentLoaded', function() {
         details: formData.get('details'),
         photoData: photoData,
         photoMimeType: photoMimeType,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        userId: userInfo.userId, // ユーザーIDを追加
+        source: userInfo.source   // アクセス元を追加
       };
 
-      // タイムアウト付きfetch
       const controller = new AbortController();
       const timeoutId = setTimeout(function() {
         controller.abort();
@@ -897,12 +711,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
       clearTimeout(timeoutId);
 
-      // レスポンスの検証
       if (!response.ok) {
         throw new Error(`サーバーエラー: ${response.status} ${response.statusText}`);
       }
 
-      // JSONレスポンスの解析
       let data;
       try {
         const responseText = await response.text();
@@ -911,7 +723,6 @@ document.addEventListener('DOMContentLoaded', function() {
         throw new Error('サーバーからの応答を解析できませんでした。');
       }
 
-      // 成功判定（新しいレスポンス形式に対応）
       if (data.status === 'success' || data.status === 'partial_success') {
         return data;
       } else {
@@ -921,7 +732,6 @@ document.addEventListener('DOMContentLoaded', function() {
     } catch (error) {
       console.error(`送信試行 ${attempt} 失敗:`, error);
 
-      // リトライ判定
       if (attempt < CONFIG.MAX_RETRY_ATTEMPTS && shouldRetry(error)) {
         showNotification(`送信に失敗しました。${CONFIG.RETRY_DELAY / 1000}秒後に再試行します... (${attempt}/${CONFIG.MAX_RETRY_ATTEMPTS})`, 'warning');
 
@@ -931,12 +741,10 @@ document.addEventListener('DOMContentLoaded', function() {
         return sendDataWithRetry(formData, photoData, photoMimeType, attempt + 1);
       }
 
-      // 最終的な失敗
       throw error;
     }
   }
 
-  // リトライすべきエラーかどうかの判定
   function shouldRetry(error) {
     return error.name === 'AbortError' ||
       error.message.includes('fetch') ||
@@ -944,7 +752,7 @@ document.addEventListener('DOMContentLoaded', function() {
       error.message.includes('timeout');
   }
 
-  // 送信成功時の処理（新しいレスポンス形式に対応）
+  // 送信成功時の処理
   function handleSubmissionSuccess(result) {
     let message = '通報を受け付けました。ご協力ありがとうございます。';
     let notificationType = 'success';
@@ -953,7 +761,6 @@ document.addEventListener('DOMContentLoaded', function() {
       message = result.message;
       notificationType = 'warning';
 
-      // 詳細情報があれば表示
       if (result.details) {
         console.log('送信結果詳細:', result.details);
         if (result.errors && result.errors.length > 0) {
@@ -962,17 +769,27 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     }
 
+    // LINE環境の場合は特別なメッセージ
+    if (userInfo.userId) {
+      message += '\n\nLINEに確認メッセージを送信しました。';
+    }
+
     showNotification(message, notificationType);
 
     // フォームのリセット
     form.reset();
     imagePreview.style.display = 'none';
     updatePhoto(null, null);
-
-    // 地図の中心座標を更新
     updateCenterCoords();
 
     console.log('送信成功:', result);
+
+    // LINE環境の場合、数秒後に自動的にLINEに戻る案内
+    if (userInfo.userId) {
+      setTimeout(() => {
+        showNotification('LINEアプリに戻って確認メッセージをご確認ください。', 'info');
+      }, 3000);
+    }
   }
 
   // 送信エラー時の処理
@@ -981,7 +798,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     let errorMessage = '送信に失敗しました。';
 
-    // エラーの種類に応じたメッセージ
     if (error.name === 'AbortError') {
       errorMessage = '送信がタイムアウトしました。ネットワーク接続を確認してください。';
     } else if (error.message.includes('CORS')) {
@@ -999,7 +815,6 @@ document.addEventListener('DOMContentLoaded', function() {
       loader.classList.remove('hidden');
       loader.classList.add('sending');
 
-      // フォーム要素を無効化
       const formElements = form.querySelectorAll('input, select, textarea, button');
       for (let i = 0; i < formElements.length; i++) {
         formElements[i].disabled = true;
@@ -1009,7 +824,6 @@ document.addEventListener('DOMContentLoaded', function() {
       loader.classList.add('hidden');
       loader.classList.remove('sending');
 
-      // フォーム要素を有効化
       const formElements = form.querySelectorAll('input, select, textarea, button');
       for (let i = 0; i < formElements.length; i++) {
         formElements[i].disabled = false;
@@ -1019,18 +833,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // 通知メッセージの表示
   function showNotification(message, type = 'info') {
-    // 既存の通知を削除
     const existingNotification = document.querySelector('.notification');
     if (existingNotification) {
       existingNotification.remove();
     }
 
-    // 新しい通知を作成
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
     notification.textContent = message;
 
-    // スタイルを設定
     notification.style.cssText = `
       position: fixed;
       top: 20px;
@@ -1045,7 +856,6 @@ document.addEventListener('DOMContentLoaded', function() {
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     `;
 
-    // タイプ別の色設定
     switch (type) {
       case 'success':
         notification.style.backgroundColor = '#10b981';
@@ -1062,7 +872,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.body.appendChild(notification);
 
-    // 5秒後に自動削除
     setTimeout(function() {
       if (notification.parentNode) {
         notification.remove();
