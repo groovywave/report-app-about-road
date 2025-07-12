@@ -7,6 +7,8 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 <link rel="stylesheet" href="style.css" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<!-- LIFF SDK追加 -->
+<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head>
 <body>
 
@@ -21,6 +23,14 @@
     <form id="report-form" novalidate>
         <h2>道路の異状を通報</h2>
         
+        <!-- LINE連携状態表示 -->
+        <div id="line-status" class="line-status hidden">
+            <div class="line-status-content">
+                <i class="fab fa-line line-icon"></i>
+                <span id="line-status-text">LINE連携を確認中...</span>
+            </div>
+        </div>
+        
         <!-- カメラ権限設定セクション -->
         <div class="camera-permission-section">
             <div class="permission-info">
@@ -31,7 +41,6 @@
                 </div>
             </div>
             
-            <!-- 権限状態表示エリア（最初から表示） -->
             <div id="permission-status" class="permission-status checking">
                 <span class="permission-status-icon"><i class="fas fa-spinner"></i></span>
                 <span>🔍 権限状態を確認中...</span>
@@ -98,6 +107,8 @@
             <div id="coords-display">地図を動かして位置を合わせてください</div>
             <input type="hidden" id="latitude" name="latitude" required>
             <input type="hidden" id="longitude" name="longitude" required>
+            <!-- LINEユーザーID用の隠しフィールド -->
+            <input type="hidden" id="lineUserId" name="lineUserId">
         </div>
         
         <button type="submit" id="btn-submit">この内容で通報する</button>
@@ -108,22 +119,16 @@
 <div id="camera-modal" class="modal-overlay hidden">
     <div class="modal-content">
         <h2>カメラ撮影</h2>
-
-        <!-- カメラ映像を表示するビュー -->
         <div id="video-wrapper">
             <video id="camera-stream" playsinline autoplay muted></video>
             <canvas id="camera-canvas" style="display: none;"></canvas>
         </div>
-
-        <!-- エラーメッセージと再試行ボタンを表示するビュー -->
         <div id="camera-error-view" class="hidden">
             <p id="camera-error-text"></p>
             <button type="button" id="retry-camera-btn" class="button-primary">
                 <i class="fas fa-sync-alt"></i> 再試行
             </button>
         </div>
-
-        <!-- 操作ボタンエリア -->
         <div class="modal-controls">
             <button type="button" id="capture-btn" class="button-primary">
                 <i class="fas fa-camera-retro"></i> 撮影
@@ -139,6 +144,3 @@
 <script src="script.js"></script>
 </body>
 </html>
-
-
-
