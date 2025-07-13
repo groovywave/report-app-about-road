@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>道路異状通報フォーム</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<link rel="stylesheet" href="style.css" />
-<!-- LIFF SDK -->
-<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>道路異状通報フォーム</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="style.css" />
+    <!-- LIFF SDK -->
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head>
 <body>
 
@@ -22,10 +22,16 @@
     <form id="report-form">
         <h2>道路の異状を通報</h2>
         
+        <!-- 隠しフィールド -->
+        <input type="hidden" id="latitude" name="latitude">
+        <input type="hidden" id="longitude" name="longitude">
+        <input type="hidden" id="accessToken" name="accessToken">
+        <input type="hidden" id="userId" name="userId">
+        
         <!-- LINE連携状態表示 -->
         <div id="line-status" class="line-status hidden">
             <div class="line-status-content">
-                <span>LINE連携を確認中...</span>
+                <span id="line-status-text">LINE連携を確認中...</span>
             </div>
         </div>
         
@@ -62,16 +68,36 @@
         
         <div class="form-group">
             <label>3. 現場の写真 (任意)</label>
-            <div class="photo-controls">
-                <label for="photo" class="button-like-input">
-                    📁 ファイルを選択
-                </label>
-                <input type="file" id="photo" name="photo" accept="image/*" style="display: none;">
-                <button type="button" id="start-camera-btn" class="camera-button">
+            
+            <!-- カメラ権限セクション -->
+            <div class="camera-permission-section">
+                <h3>📷 カメラ機能について</h3>
+                <p>写真撮影機能を使用するには、カメラへのアクセス許可が必要です。</p>
+                
+                <div id="permission-status" class="permission-status checking">
+                    <span class="permission-status-icon">🔍</span>
+                    <span>権限状態を確認中...</span>
+                </div>
+                
+                <button type="button" id="request-camera-permission" class="btn btn-secondary">
+                    📷 カメラ権限を要求
+                </button>
+                
+                <button type="button" id="start-camera-btn" class="btn btn-primary" style="display: none;">
                     📷 カメラで撮影
                 </button>
             </div>
-            <img id="image-preview" src="#" alt="写真プレビュー" style="display: none;"/>
+
+            <!-- ファイル選択 -->
+            <div class="file-input-section">
+                <input type="file" id="photo" name="photo" accept="image/*" class="file-input">
+                <label for="photo" class="file-input-label">
+                    📁 ファイルを選択
+                </label>
+            </div>
+
+            <!-- 画像プレビュー -->
+            <img id="image-preview" class="image-preview" style="display: none;" alt="選択された画像">
         </div>
         
         <div class="form-group">
@@ -85,6 +111,33 @@
         
         <button type="submit" id="btn-submit">この内容で通報する</button>
     </form>
+</div>
+
+<!-- カメラモーダル -->
+<div id="camera-modal" class="camera-modal hidden">
+    <div class="camera-modal-content">
+        <div id="video-wrapper" class="video-wrapper hidden">
+            <video id="camera-stream" autoplay playsinline></video>
+        </div>
+        
+        <div id="camera-error-view" class="camera-error-view hidden">
+            <p id="camera-error-text">カメラの起動に失敗しました</p>
+            <button type="button" id="retry-camera-btn" class="btn btn-secondary">
+                🔄 再試行
+            </button>
+        </div>
+        
+        <div class="camera-controls">
+            <button type="button" id="capture-btn" class="btn btn-primary hidden">
+                📷 撮影
+            </button>
+            <button type="button" id="cancel-camera-btn" class="btn btn-secondary">
+                ❌ キャンセル
+            </button>
+        </div>
+    </div>
+    
+    <canvas id="camera-canvas" style="display: none;"></canvas>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
