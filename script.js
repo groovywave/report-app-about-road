@@ -1,9 +1,9 @@
-// script.js - 機能していたコードベース + LINEトーク投稿機能追加版
+// script.js - LINE Login channel対応版
 
 // ▼▼▼【重要】設定値を更新してください ▼▼▼
 const CONFIG = {
-  GAS_WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbxsWYQ1E_NfQHxKRmYF08m067JziqJXEyUfwbFN0ZriZakE5p8f-gOHG9poNZBqoXba9Q/exec', // 実際のGAS URLに変更
-  LIFF_ID: '2007739464-gVVMBAQR', // 実際のLIFF IDに変更
+  GAS_WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbzFhuNuFFjA9FLRwbpBc3N8XiItfh6mVhxoNDtmTgSYsgFY-fXBR0dphkkgQE6n3nCn-g/exec',
+  LIFF_ID: '2007739464-gVVMBAQR', // LINE Login channelのLIFF IDに変更
   MAX_RETRY_ATTEMPTS: 3,
   RETRY_DELAY: 1000,
   REQUEST_TIMEOUT: 30000,
@@ -19,8 +19,6 @@ let lineAccessToken = null;
 let lineUserId = null;
 
 document.addEventListener('DOMContentLoaded', function() {
-  console.log('アプリケーション初期化開始');
-
   // 要素の取得
   const elements = {
     map: L.map('map').setView([36.871, 140.016], 16),
@@ -63,12 +61,12 @@ document.addEventListener('DOMContentLoaded', function() {
   // === フォーム機能の初期化 ===
   initializeFormFeatures(elements);
 
-  // === LIFF初期化関数（機能していたコードベース） ===
+  // === LIFF初期化関数（修正版） ===
   async function initializeLIFF() {
     try {
       console.log('LIFF初期化開始');
 
-      if (!CONFIG.LIFF_ID) {
+      if (CONFIG.LIFF_ID === 'LINE Login channelで作成したLIFF ID') {
         console.warn('LIFF_IDが設定されていません');
         updateLineStatus('warning', 'LIFF設定が必要です');
         return;
@@ -126,8 +124,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // === 地図初期化関数 ===
   function initializeMap(elements) {
-    console.log('地図初期化完了');
-
     L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
       attribution: "地理院タイル（GSI）",
       maxZoom: 18
@@ -147,7 +143,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         function(pos) {
-          console.log('現在位置取得成功');
           elements.map.setView([pos.coords.latitude, pos.coords.longitude], 18);
         },
         function(error) {
@@ -158,10 +153,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // === カメラ機能初期化（機能していたコードベース） ===
+  // === カメラ機能初期化 ===
   function initializeCameraFeatures(elements) {
-    console.log('カメラ機能初期化開始');
-
     // 初期状態ではカメラボタンを非表示
     if (elements.startCameraButton) {
       elements.startCameraButton.style.display = 'none';
@@ -172,36 +165,32 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // イベントリスナー設定
     if (elements.requestPermissionButton) {
-      elements.requestPermissionButton.addEventListener('click', function(e) {
+      elements.requestPermissionButton.addEventListener('click', (e) => {
         e.preventDefault();
         requestCameraPermission(elements);
       });
     }
 
     if (elements.startCameraButton) {
-      elements.startCameraButton.addEventListener('click', function(e) {
+      elements.startCameraButton.addEventListener('click', (e) => {
         e.preventDefault();
         startCamera(elements);
       });
     }
 
     if (elements.retryCameraButton) {
-      elements.retryCameraButton.addEventListener('click', function(e) {
+      elements.retryCameraButton.addEventListener('click', (e) => {
         e.preventDefault();
         startCamera(elements);
       });
     }
 
     if (elements.cancelButton) {
-      elements.cancelButton.addEventListener('click', function() {
-        stopCamera(elements);
-      });
+      elements.cancelButton.addEventListener('click', () => stopCamera(elements));
     }
 
     if (elements.captureButton) {
-      elements.captureButton.addEventListener('click', function() {
-        capturePhoto(elements);
-      });
+      elements.captureButton.addEventListener('click', () => capturePhoto(elements));
     }
   }
 
@@ -266,7 +255,7 @@ document.addEventListener('DOMContentLoaded', function() {
     elements.photoInput.value = '';
   }
 
-  // === カメラ関連関数（機能していたコードベース） ===
+  // === カメラ関連関数（統合・簡略化版） ===
 
   async function checkCameraPermission(elements) {
     updatePermissionStatus(elements, 'checking', '権限状態を確認中...');
@@ -302,7 +291,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const icons = {
       granted: '🟢', denied: '🔴', prompt: '🟡',
-      checking: '<i class="fas fa-spinner fa-spin"></i>', error: '🔴'
+      checking: '<i class="fas fa-spinner"></i>', error: '🔴'
     };
     const prefixes = {
       granted: '✅', denied: '❌', prompt: '⏳',
@@ -426,10 +415,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // === フォーム送信処理（LINEトーク投稿機能追加版） ===
+  // === フォーム送信処理（修正版） ===
   async function handleFormSubmission(formData, elements) {
     try {
-      console.log('送信行 1/3');
       setSubmissionState(true, elements);
 
       // バリデーション
@@ -438,26 +426,11 @@ document.addEventListener('DOMContentLoaded', function() {
         throw new Error(validation.message);
       }
 
-      console.log('Sending payload:', {
-        latitude: formData.get('latitude'),
-        longitude: formData.get('longitude'),
-        type: formData.get('type'),
-        details: formData.get('details'),
-        hasPhoto: !!currentPhoto.data,
-        hasAccessToken: !!lineAccessToken
-      });
-
       // データ送信
       const result = await sendDataWithRetry(formData);
 
       // 成功処理
       showNotification('通報を受け付けました。ご協力ありがとうございます。', 'success');
-
-      // LINEトーク画面への投稿結果も表示
-      if (result.lineNotified) {
-        showNotification('LINEトーク画面にも投稿されました。', 'success');
-      }
-
       elements.form.reset();
       updatePhoto(null, null, elements);
 
@@ -510,8 +483,8 @@ document.addEventListener('DOMContentLoaded', function() {
         details: formData.get('details'),
         photoData: currentPhoto.data,
         photoMimeType: currentPhoto.mimeType,
-        accessToken: lineAccessToken, // LINEトーク投稿用アクセストークン
-        userId: lineUserId, // ユーザーID（参考用）
+        accessToken: lineAccessToken, // アクセストークンを送信
+        userId: lineUserId, // ユーザーIDも送信（参考用）
         timestamp: new Date().toISOString()
       };
 
@@ -533,7 +506,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
 
       const data = JSON.parse(await response.text());
-      if (data.status === 'success' || data.status === 'partial_success') {
+      if (data.status === 'success') {
         return data;
       } else {
         throw new Error(data.message || 'サーバーでエラーが発生しました。');
@@ -575,3 +548,4 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 });
+
