@@ -18,7 +18,7 @@ let videoStream = null;
 let lineAccessToken = null;
 let lineUserId = null;
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
   // 要素の取得
   const elements = {
     map: L.map('map').setView([36.871, 140.016], 16),
@@ -142,10 +142,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // 現在位置の取得
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        function(pos) {
+        function (pos) {
           elements.map.setView([pos.coords.latitude, pos.coords.longitude], 18);
         },
-        function(error) {
+        function (error) {
           console.warn('位置情報の取得に失敗しました:', error);
           showNotification('位置情報の取得に失敗しました。手動で位置を調整してください。', 'warning');
         }
@@ -197,12 +197,12 @@ document.addEventListener('DOMContentLoaded', function() {
   // === フォーム機能初期化 ===
   function initializeFormFeatures(elements) {
     // 写真プレビュー
-    elements.photoInput.addEventListener('change', function() {
+    elements.photoInput.addEventListener('change', function () {
       handlePhotoInput(this, elements);
     });
 
     // フォーム送信
-    elements.form.addEventListener('submit', function(e) {
+    elements.form.addEventListener('submit', function (e) {
       e.preventDefault();
       if (!elements.loader.classList.contains('sending')) {
         const formData = new FormData(this);
