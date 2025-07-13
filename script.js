@@ -2,7 +2,7 @@
 
 // ▼▼▼【重要】設定値を更新してください ▼▼▼
 const CONFIG = {
-  GAS_WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbyQ2ugTTtKkkjRDV7WLMf8f5VXyLPIBc_BbSHlhNfqBXTBs8zqNHerBH5N6fVRCt3xZDg/exec',
+  GAS_WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbwNJWLULGW0grLHd2gxHgURpEmnLU-XuMbTogUC08xWKx8wkABfe55w45J3AruFz0uYHw/exec',
   LIFF_ID: 'YOUR_LIFF_ID', // LIFFアプリのIDに変更してください
   MAX_RETRY_ATTEMPTS: 3,
   RETRY_DELAY: 1000,
