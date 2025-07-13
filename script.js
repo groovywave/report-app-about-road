@@ -5,8 +5,8 @@ const CONFIG = {
   GAS_WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbwQ95GWJvpt_AAE4QeLvVvAVFr6UVXsUy1WMPtOyJTnle-tBGADkn02_yS7NAPrPIuXaA/exec',
   LIFF_ID: '2007739464-gVVMBAQR', // LINE Login channelのLIFF IDに変更
   // 地図設定
-  DEFAULT_LAT: 35.681236,
-  DEFAULT_LNG: 139.767125,
+  DEFAULT_LAT: 36.87,
+  DEFAULT_LNG: 140.01,
   MAP_ZOOM: 15,
   // カメラ設定
   CAMERA_WIDTH: 1280,
@@ -26,21 +26,174 @@ let cameraStream = null;
 let lineAccessToken = null;
 let lineUserId = null;
 let isLiffInitialized = false;
+let selectedImageData = null;
+let selectedImageMimeType = null;
+
+// ===========================================
+// ユーティリティ関数群（最初に定義）
+// ===========================================
 
 /**
- * ページ読み込み完了時の初期化
+ * 通知表示
  */
-document.addEventListener('DOMContentLoaded', function () {
-  console.log('ページ読み込み完了');
+function showNotification(message, type) {
+  type = type || 'info';
 
-  // CSP対応: setTimeout の文字列実行を関数実行に変更
+  // 既存の通知を削除
+  const existingNotification = document.querySelector('.notification');
+  if (existingNotification) {
+    existingNotification.remove();
+  }
+
+  // 新しい通知要素を作成
+  const notification = document.createElement('div');
+  notification.className = 'notification notification-' + type;
+  notification.textContent = message;
+
+  // ページに追加
+  document.body.appendChild(notification);
+
+  // 自動削除
   setTimeout(function () {
-    initializeApp();
-  }, 100);
-});
+    if (notification.parentNode) {
+      notification.remove();
+    }
+  }, CONFIG.NOTIFICATION_DURATION);
+}
 
 /**
- * アプリケーション初期化（CSP対応版）
+ * ローディング表示
+ */
+function showLoading(message) {
+  message = message || '処理中...';
+
+  let loader = document.getElementById('loader-overlay');
+
+  if (!loader) {
+    // ローディング要素を作成
+    loader = document.createElement('div');
+    loader.id = 'loader-overlay';
+    loader.className = 'loader-overlay';
+    loader.innerHTML = '<div class="loader"></div><div class="loader-text">' + message + '</div>';
+    document.body.appendChild(loader);
+  } else {
+    // メッセージを更新
+    const loaderText = loader.querySelector('.loader-text');
+    if (loaderText) {
+      loaderText.textContent = message;
+    }
+    loader.style.display = 'flex';
+  }
+}
+
+/**
+ * ローディング非表示
+ */
+function hideLoading() {
+  const loader = document.getElementById('loader-overlay');
+  if (loader) {
+    loader.style.display = 'none';
+  }
+}
+
+/**
+ * LINE連携状態更新
+ */
+function updateLineStatus(type, message) {
+  const statusElement = document.getElementById('line-status');
+  if (!statusElement) return;
+
+  // 既存のクラスを削除
+  statusElement.className = 'line-status';
+
+  // 新しいクラスを追加
+  statusElement.classList.add(type);
+
+  // アイコンとメッセージを設定
+  const iconMap = {
+    'success': '✅',
+    'error': '❌',
+    'warning': '⚠️',
+    'info': 'ℹ️'
+  };
+
+  const icon = iconMap[type] || 'ℹ️';
+
+  statusElement.innerHTML = '<div class="line-status-content"><span class="line-icon">' + icon + '</span><span>' + message + '</span></div>';
+
+  // 表示
+  statusElement.classList.remove('hidden');
+}
+
+/**
+ * カメラ権限状況更新
+ */
+function updateCameraPermissionStatus(status, message) {
+  const statusElement = document.getElementById('camera-permission-status');
+  const requestButton = document.getElementById('request-camera-permission');
+  const cameraButton = document.getElementById('btn-camera');
+
+  if (!statusElement) return;
+
+  // 既存のクラスを削除
+  statusElement.className = 'permission-status';
+
+  // ステータスに応じたクラスとアイコンを設定
+  const statusConfig = {
+    'checking': { class: 'checking', icon: '⏳', showButton: false, enableCamera: false },
+    'granted': { class: 'granted', icon: '✅', showButton: false, enableCamera: true },
+    'denied': { class: 'denied', icon: '❌', showButton: true, enableCamera: false },
+    'prompt': { class: 'prompt', icon: '❓', showButton: true, enableCamera: false },
+    'not-found': { class: 'denied', icon: '📷', showButton: false, enableCamera: false },
+    'not-supported': { class: 'denied', icon: '🚫', showButton: false, enableCamera: false },
+    'error': { class: 'denied', icon: '⚠️', showButton: true, enableCamera: false }
+  };
+
+  const config = statusConfig[status] || statusConfig['error'];
+
+  statusElement.classList.add(config.class);
+  statusElement.innerHTML = '<span class="permission-status-icon">' + config.icon + '</span><span>' + message + '</span>';
+
+  // ボタンの表示/非表示
+  if (requestButton) {
+    requestButton.style.display = config.showButton ? 'flex' : 'none';
+  }
+
+  // カメラボタンの有効/無効
+  if (cameraButton) {
+    cameraButton.disabled = !config.enableCamera;
+  }
+}
+
+/**
+ * 座標表示更新
+ */
+function updateCoordinatesDisplay() {
+  const coordsDisplay = document.getElementById('coords-display');
+  if (coordsDisplay) {
+    coordsDisplay.textContent = '緯度: ' + currentPosition.lat.toFixed(6) + ', 経度: ' + currentPosition.lng.toFixed(6);
+  }
+}
+
+/**
+ * 安全なJSON解析
+ */
+function safeJsonParse(jsonString, defaultValue) {
+  defaultValue = defaultValue || null;
+  try {
+    return JSON.parse(jsonString);
+  } catch (error) {
+    console.error('JSON解析エラー:', error);
+    return defaultValue;
+  }
+}
+
+// ===========================================
+// 初期化関数群
+// ===========================================
+
+/**
+ * アプリケーション初期化
  */
 function initializeApp() {
   try {
@@ -67,7 +220,7 @@ function initializeApp() {
 }
 
 /**
- * LIFF初期化（CSP対応版）
+ * LIFF初期化
  */
 function initializeLiff() {
   if (!CONFIG.LIFF_ID || CONFIG.LIFF_ID === 'LINE Login channelで作成したLIFF ID') {
@@ -77,7 +230,7 @@ function initializeLiff() {
   }
 
   try {
-    // LIFF初期化（CSP対応: コールバック関数を直接指定）
+    // LIFF初期化
     liff.init({
       liffId: CONFIG.LIFF_ID
     }).then(function () {
@@ -103,7 +256,7 @@ function initializeLiff() {
     }).then(function (profile) {
       lineUserId = profile.userId;
       console.log('ユーザー情報取得成功:', profile.displayName);
-      updateLineStatus('success', `LINE連携済み: ${profile.displayName}`);
+      updateLineStatus('success', 'LINE連携済み: ' + profile.displayName);
     }).catch(function (error) {
       console.error('LIFF初期化エラー:', error);
       updateLineStatus('error', 'LINE連携エラー: ' + error.message);
@@ -116,7 +269,7 @@ function initializeLiff() {
 }
 
 /**
- * 地図初期化（CSP対応版）
+ * 地図初期化
  */
 function initializeMap() {
   try {
@@ -128,7 +281,7 @@ function initializeMap() {
       attribution: '© OpenStreetMap contributors'
     }).addTo(map);
 
-    // 地図移動イベント（CSP対応: 関数参照を使用）
+    // 地図移動イベント
     map.on('moveend', function () {
       updateMapPosition();
     });
@@ -145,7 +298,7 @@ function initializeMap() {
 }
 
 /**
- * 現在位置取得（CSP対応版）
+ * 現在位置取得
  */
 function getCurrentLocation() {
   if (!navigator.geolocation) {
@@ -159,7 +312,6 @@ function getCurrentLocation() {
     maximumAge: 300000 // 5分間キャッシュ
   };
 
-  // CSP対応: コールバック関数を直接指定
   navigator.geolocation.getCurrentPosition(
     function (position) {
       currentPosition = {
@@ -184,7 +336,7 @@ function getCurrentLocation() {
 }
 
 /**
- * 地図位置更新（CSP対応版）
+ * 地図位置更新
  */
 function updateMapPosition() {
   if (!map) return;
@@ -199,17 +351,7 @@ function updateMapPosition() {
 }
 
 /**
- * 座標表示更新
- */
-function updateCoordinatesDisplay() {
-  const coordsDisplay = document.getElementById('coords-display');
-  if (coordsDisplay) {
-    coordsDisplay.textContent = `緯度: ${currentPosition.lat.toFixed(6)}, 経度: ${currentPosition.lng.toFixed(6)}`;
-  }
-}
-
-/**
- * カメラ権限チェック（CSP対応版）
+ * カメラ権限チェック
  */
 function checkCameraPermission() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -217,7 +359,7 @@ function checkCameraPermission() {
     return;
   }
 
-  // 権限状態をチェック（CSP対応: Promise.then()を使用）
+  // 権限状態をチェック
   navigator.mediaDevices.enumerateDevices()
     .then(function (devices) {
       const hasCamera = devices.some(function (device) {
@@ -258,280 +400,4 @@ function checkCameraPermission() {
         updateCameraPermissionStatus('error', 'カメラ権限の確認に失敗しました');
       }
     });
-}
-
-/**
- * カメラ権限状況更新
- */
-function updateCameraPermissionStatus(status, message) {
-  const statusElement = document.getElementById('camera-permission-status');
-  const requestButton = document.getElementById('request-camera-permission');
-  const cameraButton = document.getElementById('btn-camera');
-
-  if (!statusElement) return;
-
-  // 既存のクラスを削除
-  statusElement.className = 'permission-status';
-
-  // ステータスに応じたクラスとアイコンを設定
-  const statusConfig = {
-    'checking': { class: 'checking', icon: '⏳', showButton: false, enableCamera: false },
-    'granted': { class: 'granted', icon: '✅', showButton: false, enableCamera: true },
-    'denied': { class: 'denied', icon: '❌', showButton: true, enableCamera: false },
-    'prompt': { class: 'prompt', icon: '❓', showButton: true, enableCamera: false },
-    'not-found': { class: 'denied', icon: '📷', showButton: false, enableCamera: false },
-    'not-supported': { class: 'denied', icon: '🚫', showButton: false, enableCamera: false },
-    'error': { class: 'denied', icon: '⚠️', showButton: true, enableCamera: false }
-  };
-
-  const config = statusConfig[status] || statusConfig['error'];
-
-  statusElement.classList.add(config.class);
-  statusElement.innerHTML = `
-    <span class="permission-status-icon">${config.icon}</span>
-    <span>${message}</span>
-  `;
-
-  // ボタンの表示/非表示
-  if (requestButton) {
-    requestButton.style.display = config.showButton ? 'flex' : 'none';
-  }
-
-  // カメラボタンの有効/無効
-  if (cameraButton) {
-    cameraButton.disabled = !config.enableCamera;
-  }
-}
-
-/**
- * イベントリスナー設定（CSP対応版）
- */
-function setupEventListeners() {
-  // カメラ権限要求ボタン
-  const requestButton = document.getElementById('request-camera-permission');
-  if (requestButton) {
-    requestButton.addEventListener('click', function () {
-      requestCameraPermission();
-    });
-  }
-
-  // ファイル選択
-  const fileInput = document.getElementById('photo-input');
-  if (fileInput) {
-    fileInput.addEventListener('change', function (event) {
-      handleFileSelect(event);
-    });
-  }
-
-  // カメラ撮影ボタン
-  const cameraButton = document.getElementById('btn-camera');
-  if (cameraButton) {
-    cameraButton.addEventListener('click', function () {
-      openCameraModal();
-    });
-  }
-
-  // フォーム送信
-  const submitButton = document.getElementById('btn-submit');
-  if (submitButton) {
-    submitButton.addEventListener('click', function (event) {
-      event.preventDefault();
-      submitForm();
-    });
-  }
-
-  // モーダル関連のイベントリスナー
-  setupModalEventListeners();
-}
-
-/**
- * モーダルイベントリスナー設定（CSP対応版）
- */
-function setupModalEventListeners() {
-  // カメラモーダルのボタン
-  const captureButton = document.getElementById('btn-capture');
-  if (captureButton) {
-    captureButton.addEventListener('click', function () {
-      capturePhoto();
-    });
-  }
-
-  const closeModalButton = document.getElementById('btn-close-modal');
-  if (closeModalButton) {
-    closeModalButton.addEventListener('click', function () {
-      closeCameraModal();
-    });
-  }
-
-  // モーダル背景クリックで閉じる
-  const modalOverlay = document.getElementById('camera-modal');
-  if (modalOverlay) {
-    modalOverlay.addEventListener('click', function (event) {
-      if (event.target === modalOverlay) {
-        closeCameraModal();
-      }
-    });
-  }
-}
-
-/**
- * カメラ権限要求（CSP対応版）
- */
-function requestCameraPermission() {
-  updateCameraPermissionStatus('checking', 'カメラ権限を要求中...');
-
-  navigator.mediaDevices.getUserMedia({
-    video: {
-      width: { ideal: CONFIG.CAMERA_WIDTH },
-      height: { ideal: CONFIG.CAMERA_HEIGHT }
-    }
-  })
-    .then(function (stream) {
-      updateCameraPermissionStatus('granted', 'カメラアクセスが許可されました');
-
-      // テスト用ストリームを停止
-      stream.getTracks().forEach(function (track) {
-        track.stop();
-      });
-    })
-    .catch(function (error) {
-      console.error('カメラ権限要求エラー:', error);
-
-      if (error.name === 'NotAllowedError') {
-        updateCameraPermissionStatus('denied', 'カメラアクセスが拒否されました');
-      } else {
-        updateCameraPermissionStatus('error', 'カメラ権限の要求に失敗しました');
-      }
-    });
-}
-
-/**
- * ファイル選択処理（CSP対応版）
- */
-function handleFileSelect(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  // ファイルサイズチェック
-  if (file.size > CONFIG.MAX_IMAGE_SIZE) {
-    showNotification(`ファイルサイズが大きすぎます（最大${CONFIG.MAX_IMAGE_SIZE / 1024 / 1024}MB）`, 'error');
-    return;
-  }
-
-  // ファイルタイプチェック
-  if (!file.type.startsWith('image/')) {
-    showNotification('画像ファイルを選択してください', 'error');
-    return;
-  }
-
-  // FileReader使用（CSP対応: onload関数を直接指定）
-  const reader = new FileReader();
-  reader.onload = function (e) {
-    displaySelectedImage(e.target.result, file.type);
-  };
-  reader.onerror = function () {
-    showNotification('ファイルの読み込みに失敗しました', 'error');
-  };
-  reader.readAsDataURL(file);
-}
-
-/**
- * 選択画像表示
- */
-function displaySelectedImage(dataUrl, mimeType) {
-  const preview = document.getElementById('image-preview');
-  if (preview) {
-    preview.src = dataUrl;
-    preview.style.display = 'block';
-
-    // グローバル変数に保存
-    window.selectedImageData = dataUrl;
-    window.selectedImageMimeType = mimeType;
-
-    showNotification('画像が選択されました', 'success');
-  }
-}
-
-/**
- * カメラモーダル開く（CSP対応版）
- */
-function openCameraModal() {
-  const modal = document.getElementById('camera-modal');
-  const videoElement = document.getElementById('camera-stream');
-  const errorView = document.getElementById('camera-error-view');
-
-  if (!modal || !videoElement) return;
-
-  modal.style.display = 'flex';
-
-  // カメラストリーム開始
-  navigator.mediaDevices.getUserMedia({
-    video: {
-      width: { ideal: CONFIG.CAMERA_WIDTH },
-      height: { ideal: CONFIG.CAMERA_HEIGHT }
-    }
-  })
-    .then(function (stream) {
-      cameraStream = stream;
-      videoElement.srcObject = stream;
-      videoElement.style.display = 'block';
-      if (errorView) errorView.style.display = 'none';
-    })
-    .catch(function (error) {
-      console.error('カメラストリーム開始エラー:', error);
-      videoElement.style.display = 'none';
-      if (errorView) {
-        errorView.style.display = 'block';
-        errorView.textContent = 'カメラの起動に失敗しました: ' + error.message;
-      }
-    });
-}
-
-/**
- * 写真撮影（CSP対応版）
- */
-function capturePhoto() {
-  const videoElement = document.getElementById('camera-stream');
-  if (!videoElement || !cameraStream) {
-    showNotification('カメラが利用できません', 'error');
-    return;
-  }
-
-  // Canvas要素を作成して撮影
-  const canvas = document.createElement('canvas');
-  const context = canvas.getContext('2d');
-
-  canvas.width = videoElement.videoWidth;
-  canvas.height = videoElement.videoHeight;
-
-  context.drawImage(videoElement, 0, 0);
-
-  // 画像データを取得
-  const dataUrl = canvas.toDataURL('image/jpeg', CONFIG.IMAGE_QUALITY);
-
-  // プレビュー表示
-  displaySelectedImage(dataUrl, 'image/jpeg');
-
-  // モーダルを閉じる
-  closeCameraModal();
-
-  showNotification('写真を撮影しました', 'success');
-}
-
-/**
- * カメラモーダル閉じる
- */
-function closeCameraModal() {
-  const modal = document.getElementById('camera-modal');
-  if (modal) {
-    modal.style.display = 'none';
-  }
-
-  // カメラストリームを停止
-  if (cameraStream) {
-    cameraStream.getTracks().forEach(function (track) {
-      track.stop();
-    });
-    cameraStream = null;
-  }
 }
