@@ -1,8 +1,8 @@
-// script.js - 動作実績版をベースにした修正版
+// script.js - Google Drive写真登録・LINE投稿対応版
 
 // ▼▼▼【重要】設定値を更新してください ▼▼▼
 const CONFIG = {
-  GAS_WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbwXmt_6__cVkEiQRbn7UXEvVEl9MhYRXHzfm9PFYnoNn-ANqGHcGOL9nQot2MIRhPFfeQ/exec',
+  GAS_WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbzP7hedevd5ZondYkGYFsQOpxr6sEnQPvga0jajawQsflVa1SKggXAUcCaJSjLBToEDxg/exec',
   LIFF_ID: '2007739464-gVVMBAQR', // 実際のLIFF IDに変更
   MAX_RETRY_ATTEMPTS: 3,
   RETRY_DELAY: 1000,
@@ -23,7 +23,7 @@ let videoStream = null;
 let lineAccessToken = null;
 let lineUserId = null;
 
-// ===== 動作実績のあるデータ送信関数 =====
+// ===== 動作実績のあるデータ送信関数（写真データ対応） =====
 
 async function sendDataWithRetry(formData, attempt = 1) {
   try {
@@ -35,8 +35,8 @@ async function sendDataWithRetry(formData, attempt = 1) {
       longitude: formData.get('longitude'),
       type: formData.get('type'),
       details: formData.get('details'),
-      photoData: currentPhoto.data,
-      photoMimeType: currentPhoto.mimeType,
+      photoData: currentPhoto.data, // Base64画像データ
+      photoMimeType: currentPhoto.mimeType, // MIMEタイプ
       accessToken: lineAccessToken,
       userId: lineUserId,
       timestamp: new Date().toISOString()
@@ -44,14 +44,14 @@ async function sendDataWithRetry(formData, attempt = 1) {
 
     console.log('Sending payload:', {
       ...payload,
-      photoData: payload.photoData ? '[IMAGE_DATA]' : null
+      photoData: payload.photoData ? '[IMAGE_DATA_' + payload.photoData.length + '_CHARS]' : null
     });
 
     // AbortControllerでタイムアウト制御
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), CONFIG.REQUEST_TIMEOUT);
 
-    // 動作実績のあるfetchリクエスト（シンプル版）
+    // 動作実績のあるfetchリクエスト
     const response = await fetch(CONFIG.GAS_WEB_APP_URL, {
       method: 'POST',
       body: JSON.stringify(payload),
@@ -94,7 +94,7 @@ function shouldRetry(error) {
     error.message.includes('timeout');
 }
 
-// ===== フォーム送信処理（動作実績版ベース） =====
+// ===== フォーム送信処理（写真データ対応版） =====
 
 async function handleFormSubmission(formData, elements) {
   try {
@@ -104,6 +104,14 @@ async function handleFormSubmission(formData, elements) {
     const validation = validateFormData(formData);
     if (!validation.isValid) {
       throw new Error(validation.message);
+    }
+
+    // 写真データの確認
+    if (currentPhoto.data) {
+      console.log('写真データあり:', {
+        mimeType: currentPhoto.mimeType,
+        dataLength: currentPhoto.data.length
+      });
     }
 
     // データ送信
@@ -121,7 +129,7 @@ async function handleFormSubmission(formData, elements) {
     }
 
     if (result.imageUploaded) {
-      console.log('画像アップロード成功');
+      showNotification('写真をGoogle Driveに保存しました', 'info');
     }
 
     // フォームリセット
@@ -168,7 +176,66 @@ function validateFormData(formData) {
   return { isValid: true };
 }
 
-// ===== その他の関数（動作実績版から継承） =====
+// ===== 写真処理関数（Base64データ対応） =====
+
+function updatePhoto(data, mimeType, elements) {
+  currentPhoto.data = data;
+  currentPhoto.mimeType = mimeType;
+
+  if (data && mimeType) {
+    elements.imagePreview.src = data;
+    elements.imagePreview.style.display = 'block';
+    console.log('写真設定完了:', {
+      mimeType: mimeType,
+      dataLength: data.length
+    });
+  } else {
+    elements.imagePreview.src = '#';
+    elements.imagePreview.style.display = 'none';
+    console.log('写真クリア');
+  }
+
+  if (elements.photoInput) {
+    elements.photoInput.value = '';
+  }
+}
+
+function handlePhotoInput(input, elements) {
+  if (input.files && input.files[0]) {
+    const file = input.files[0];
+
+    console.log('ファイル選択:', {
+      name: file.name,
+      size: file.size,
+      type: file.type
+    });
+
+    if (file.size > CONFIG.MAX_FILE_SIZE) {
+      showNotification('ファイルサイズが大きすぎます。5MB以下のファイルを選択してください。', 'error');
+      updatePhoto(null, null, elements);
+      return;
+    }
+
+    if (!CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) {
+      showNotification('対応していないファイル形式です。', 'error');
+      updatePhoto(null, null, elements);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      updatePhoto(e.target.result, file.type, elements);
+      showNotification('画像が選択されました', 'success');
+    };
+    reader.onerror = () => {
+      showNotification('ファイルの読み込みに失敗しました。', 'error');
+      updatePhoto(null, null, elements);
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+// ===== その他の関数（既存のまま） =====
 
 function showNotification(message, type = 'info') {
   const existingNotification = document.querySelector('.notification');
@@ -194,20 +261,6 @@ function showNotification(message, type = 'info') {
 
   document.body.appendChild(notification);
   setTimeout(() => notification.remove(), 5000);
-}
-
-function updatePhoto(data, mimeType, elements) {
-  currentPhoto.data = data;
-  currentPhoto.mimeType = mimeType;
-
-  if (data && mimeType) {
-    elements.imagePreview.src = data;
-    elements.imagePreview.style.display = 'block';
-  } else {
-    elements.imagePreview.src = '#';
-    elements.imagePreview.style.display = 'none';
-  }
-  elements.photoInput.value = '';
 }
 
 function setSubmissionState(isSending, elements) {
@@ -393,34 +446,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
   console.log('アプリケーション初期化完了');
 });
-
-// ===== 写真入力処理（動作実績版） =====
-
-function handlePhotoInput(input, elements) {
-  if (input.files && input.files[0]) {
-    const file = input.files[0];
-
-    if (file.size > CONFIG.MAX_FILE_SIZE) {
-      showNotification('ファイルサイズが大きすぎます。5MB以下のファイルを選択してください。', 'error');
-      updatePhoto(null, null, elements);
-      return;
-    }
-
-    if (!CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) {
-      showNotification('対応していないファイル形式です。', 'error');
-      updatePhoto(null, null, elements);
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => updatePhoto(e.target.result, file.type, elements);
-    reader.onerror = () => {
-      showNotification('ファイルの読み込みに失敗しました。', 'error');
-      updatePhoto(null, null, elements);
-    };
-    reader.readAsDataURL(file);
-  }
-}
 
 // ページ離脱時のクリーンアップ
 window.addEventListener('beforeunload', () => {
