@@ -229,7 +229,7 @@ async function initializeLIFF() {
   try {
     console.log('LIFF初期化開始');
 
-    if (CONFIG.LIFF_ID === '2007739464-gVVMBAQR') {
+    if (!CONFIG.LIFF_ID) {
       console.warn('LIFF_IDが設定されていません');
       updateLineStatus('warning', 'LIFF設定が必要です');
       return;
