@@ -54,14 +54,14 @@ function showNotification(message, type) {
   document.body.appendChild(notification);
 
   // 5秒後に削除
-  const timeoutId = window.setTimeout(function () {
+  const timeoutId = window.setTimeout(function() {
     if (notification.parentNode) {
       notification.remove();
     }
   }, 5000);
 
   // クリックで即座に削除
-  notification.addEventListener('click', function () {
+  notification.addEventListener('click', function() {
     window.clearTimeout(timeoutId);
     notification.remove();
   });
@@ -79,7 +79,7 @@ function updateLineStatus(type, message) {
 
   // 成功時は5秒後に非表示
   if (type === 'success') {
-    window.setTimeout(function () {
+    window.setTimeout(function() {
       statusElement.classList.add('hidden');
     }, 5000);
   }
@@ -130,7 +130,7 @@ function initializeLiff() {
 
   try {
     liff.init({ liffId: CONFIG.LIFF_ID })
-      .then(function () {
+      .then(function() {
         console.log('LIFF初期化成功');
 
         if (liff.isLoggedIn()) {
@@ -140,7 +140,7 @@ function initializeLiff() {
           throw new Error('LINEにログインしていません');
         }
       })
-      .then(function (profile) {
+      .then(function(profile) {
         lineUserId = profile.userId;
 
         // 隠しフィールドに設定
@@ -152,7 +152,7 @@ function initializeLiff() {
         updateLineStatus('success', 'LINE連携済み: ' + profile.displayName);
         console.log('LINEユーザー情報取得成功:', profile);
       })
-      .catch(function (error) {
+      .catch(function(error) {
         console.error('LIFF初期化エラー:', error);
         updateLineStatus('error', 'LINE連携エラー: ' + error.message);
 
@@ -189,7 +189,7 @@ function initializeMap() {
     }).addTo(map);
 
     // 地図移動イベント
-    map.on('moveend', function () {
+    map.on('moveend', function() {
       const center = map.getCenter();
       currentPosition = {
         lat: center.lat,
@@ -216,7 +216,7 @@ function getCurrentLocation() {
   }
 
   navigator.geolocation.getCurrentPosition(
-    function (position) {
+    function(position) {
       currentPosition = {
         lat: position.coords.latitude,
         lng: position.coords.longitude
@@ -229,7 +229,7 @@ function getCurrentLocation() {
 
       console.log('現在位置取得成功:', currentPosition);
     },
-    function (error) {
+    function(error) {
       console.warn('現在位置取得エラー:', error.message);
     },
     {
@@ -256,7 +256,7 @@ function checkCameraPermission() {
 
     if (navigator.permissions) {
       navigator.permissions.query({ name: 'camera' })
-        .then(function (permission) {
+        .then(function(permission) {
           const messages = {
             granted: 'カメラアクセスが許可されています',
             denied: 'カメラアクセスが拒否されています',
@@ -268,7 +268,7 @@ function checkCameraPermission() {
             startCameraButton.style.display = permission.state === 'granted' ? 'block' : 'none';
           }
         })
-        .catch(function (error) {
+        .catch(function(error) {
           console.error('権限確認エラー:', error);
           updatePermissionStatus('error', '権限確認エラー');
         });
@@ -305,8 +305,8 @@ function requestCameraPermission() {
   button.innerHTML = '🔍 権限要求中...';
 
   navigator.mediaDevices.getUserMedia({ video: true, audio: false })
-    .then(function (stream) {
-      stream.getTracks().forEach(function (track) {
+    .then(function(stream) {
+      stream.getTracks().forEach(function(track) {
         track.stop();
       });
 
@@ -318,7 +318,7 @@ function requestCameraPermission() {
         startCameraButton.style.display = 'block';
       }
     })
-    .catch(function (error) {
+    .catch(function(error) {
       const errorMessages = {
         NotAllowedError: 'カメラアクセスが拒否されました。ブラウザの設定で許可してください。',
         NotFoundError: 'カメラデバイスが見つかりません。',
@@ -328,7 +328,7 @@ function requestCameraPermission() {
       updatePermissionStatus('denied', message);
       showNotification(message, 'error');
     })
-    .finally(function () {
+    .finally(function() {
       button.disabled = false;
       button.innerHTML = originalHTML;
     });
@@ -336,7 +336,7 @@ function requestCameraPermission() {
 
 function startCamera() {
   navigator.mediaDevices.getUserMedia({ video: true, audio: false })
-    .then(function (stream) {
+    .then(function(stream) {
       videoStream = stream;
 
       const videoElement = document.getElementById('camera-stream');
@@ -353,7 +353,7 @@ function startCamera() {
 
       showNotification('カメラが起動しました', 'success');
     })
-    .catch(function (error) {
+    .catch(function(error) {
       console.error('カメラ起動失敗:', error);
 
       const cameraErrorText = document.getElementById('camera-error-text');
@@ -374,7 +374,7 @@ function startCamera() {
 
 function stopCamera() {
   if (videoStream) {
-    videoStream.getTracks().forEach(function (track) {
+    videoStream.getTracks().forEach(function(track) {
       track.stop();
     });
     videoStream = null;
@@ -426,11 +426,11 @@ function handleFileSelect(event) {
   }
 
   const reader = new FileReader();
-  reader.onload = function (e) {
+  reader.onload = function(e) {
     updatePhoto(e.target.result, file.type);
     showNotification('画像が選択されました', 'success');
   };
-  reader.onerror = function () {
+  reader.onerror = function() {
     showNotification('ファイルの読み込みに失敗しました', 'error');
     updatePhoto(null, null);
   };
@@ -520,7 +520,7 @@ function submitForm(event) {
 
   // データ送信（CORS対応版）
   sendDataWithRetry(formData)
-    .then(function (result) {
+    .then(function(result) {
       console.log('送信成功:', result);
       showNotification('通報を受け付けました。ご協力ありがとうございます。', 'success');
 
@@ -531,11 +531,11 @@ function submitForm(event) {
       // フォームリセット
       resetForm();
     })
-    .catch(function (error) {
+    .catch(function(error) {
       console.error('送信エラー:', error);
       showNotification('送信に失敗しました: ' + error.message, 'error');
     })
-    .finally(function () {
+    .finally(function() {
       setSubmissionState(false);
     });
 }
@@ -543,9 +543,9 @@ function submitForm(event) {
 function sendDataWithRetry(formData, attempt) {
   attempt = attempt || 1;
 
-  return new Promise(function (resolve, reject) {
+  return new Promise(function(resolve, reject) {
     const controller = new AbortController();
-    const timeoutId = window.setTimeout(function () {
+    const timeoutId = window.setTimeout(function() {
       controller.abort();
     }, CONFIG.REQUEST_TIMEOUT);
 
@@ -559,7 +559,7 @@ function sendDataWithRetry(formData, attempt) {
       mode: 'cors',
       signal: controller.signal
     })
-      .then(function (response) {
+      .then(function(response) {
         window.clearTimeout(timeoutId);
 
         if (!response.ok) {
@@ -568,7 +568,7 @@ function sendDataWithRetry(formData, attempt) {
 
         return response.text();
       })
-      .then(function (text) {
+      .then(function(text) {
         const data = JSON.parse(text);
         if (data.status === 'success') {
           resolve(data);
@@ -576,12 +576,12 @@ function sendDataWithRetry(formData, attempt) {
           throw new Error(data.message || 'サーバーでエラーが発生しました');
         }
       })
-      .catch(function (error) {
+      .catch(function(error) {
         window.clearTimeout(timeoutId);
 
         if (attempt < CONFIG.MAX_RETRY_ATTEMPTS && shouldRetry(error)) {
           showNotification('送信に失敗しました。' + (CONFIG.RETRY_DELAY / 1000) + '秒後に再試行します... (' + attempt + '/' + CONFIG.MAX_RETRY_ATTEMPTS + ')', 'warning');
-          window.setTimeout(function () {
+          window.setTimeout(function() {
             sendDataWithRetry(formData, attempt + 1)
               .then(resolve)
               .catch(reject);
@@ -603,7 +603,7 @@ function shouldRetry(error) {
 function resetForm() {
   // ラジオボタンリセット
   const typeInputs = document.querySelectorAll('input[name="type"]');
-  typeInputs.forEach(function (input) {
+  typeInputs.forEach(function(input) {
     input.checked = false;
   });
 
@@ -627,7 +627,7 @@ function setupEventListeners() {
   // カメラ権限要求
   const requestPermissionButton = document.getElementById('request-camera-permission');
   if (requestPermissionButton) {
-    requestPermissionButton.addEventListener('click', function (e) {
+    requestPermissionButton.addEventListener('click', function(e) {
       e.preventDefault();
       requestCameraPermission();
     });
@@ -636,7 +636,7 @@ function setupEventListeners() {
   // カメラ開始
   const startCameraButton = document.getElementById('start-camera-btn');
   if (startCameraButton) {
-    startCameraButton.addEventListener('click', function (e) {
+    startCameraButton.addEventListener('click', function(e) {
       e.preventDefault();
       startCamera();
     });
@@ -645,7 +645,7 @@ function setupEventListeners() {
   // カメラ再試行
   const retryCameraButton = document.getElementById('retry-camera-btn');
   if (retryCameraButton) {
-    retryCameraButton.addEventListener('click', function (e) {
+    retryCameraButton.addEventListener('click', function(e) {
       e.preventDefault();
       startCamera();
     });
@@ -654,7 +654,7 @@ function setupEventListeners() {
   // 撮影
   const captureButton = document.getElementById('capture-btn');
   if (captureButton) {
-    captureButton.addEventListener('click', function () {
+    captureButton.addEventListener('click', function() {
       capturePhoto();
     });
   }
@@ -662,7 +662,7 @@ function setupEventListeners() {
   // カメラキャンセル
   const cancelButton = document.getElementById('cancel-camera-btn');
   if (cancelButton) {
-    cancelButton.addEventListener('click', function () {
+    cancelButton.addEventListener('click', function() {
       stopCamera();
     });
   }
@@ -690,13 +690,13 @@ function initializeApp() {
     initializeLiff();
 
     // 2. 地図初期化（少し遅延）
-    window.setTimeout(function () {
+    window.setTimeout(function() {
       initializeMap();
       getCurrentLocation();
     }, 100);
 
     // 3. カメラ権限確認
-    window.setTimeout(function () {
+    window.setTimeout(function() {
       checkCameraPermission();
     }, 200);
 
@@ -713,7 +713,7 @@ function initializeApp() {
 
 // ===== DOM読み込み完了時の初期化 =====
 
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', function() {
   console.log('ページ読み込み完了');
 
   // 少し遅延させて初期化
@@ -722,19 +722,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
 // ===== エラーハンドリング =====
 
-window.addEventListener('error', function (event) {
+window.addEventListener('error', function(event) {
   console.error('グローバルエラー:', event.error);
 });
 
-window.addEventListener('unhandledrejection', function (event) {
+window.addEventListener('unhandledrejection', function(event) {
   console.error('未処理のPromise拒否:', event.reason);
 });
 
 // ===== ページ離脱時のクリーンアップ =====
 
-window.addEventListener('beforeunload', function () {
+window.addEventListener('beforeunload', function() {
   if (videoStream) {
-    videoStream.getTracks().forEach(function (track) {
+    videoStream.getTracks().forEach(function(track) {
       track.stop();
     });
   }
