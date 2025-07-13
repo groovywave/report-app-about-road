@@ -1,6 +1,6 @@
 // 設定
 const CONFIG = {
-  GAS_WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbwQ95GWJvpt_AAE4QeLvVvAVFr6UVXsUy1WMPtOyJTnle-tBGADkn02_yS7NAPrPIuXaA/exec',
+  GAS_WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbxRQHZJrSOyPcALCbPQksYbV-gDznGWM5jxkQlA4Bdod4K6H1S31eN0O2iCKZoDrfqnDg/exec',
   LIFF_ID: '2007739464-gVVMBAQR',
   DEFAULT_LAT: 36.87,
   DEFAULT_LNG: 140.01,
