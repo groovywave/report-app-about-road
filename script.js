@@ -335,7 +335,7 @@ function updatePhoto(data, mimeType) {
 }
 
 function initializeLiff() {
-  if (!CONFIG.LIFF_ID || CONFIG.LIFF_ID === '2007739464-gVVMBAQR') {
+  if (!CONFIG.LIFF_ID) {
     console.warn('LIFF IDが設定されていません');
     updateLineStatus('warning', 'LIFF設定が必要です - 実際のLIFF IDを設定してください');
     return;
