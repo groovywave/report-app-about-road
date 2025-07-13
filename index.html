@@ -2,9 +2,12 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:;">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>道路異状通報フォーム</title>
+    
+    <!-- CSP設定（緩和版） -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' https:; script-src 'self' 'unsafe-inline' https: https://static.line-scdn.net https://unpkg.com; style-src 'self' 'unsafe-inline' https: https://unpkg.com; img-src 'self' data: https: blob:; connect-src 'self' https: https://api.line.me https://script.google.com;">
+    
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="style.css" />
     <!-- LIFF SDK -->
@@ -37,8 +40,8 @@
         </div>
         
         <div class="form-group">
-            <label class="form-label">1. 異状の種類</label>
-            <div class="radio-group">
+            <label class="form-label" for="type-group">1. 異状の種類</label>
+            <div class="radio-group" id="type-group" role="radiogroup" aria-labelledby="type-label">
                 <div class="radio-item">
                     <input type="radio" id="type1" name="type" value="雑草" required>
                     <label for="type1">雑草</label>
@@ -68,44 +71,46 @@
         </div>
         
         <div class="form-group">
-            <label>3. 現場の写真 (任意)</label>
-            
-            <!-- カメラ権限セクション -->
-            <div class="camera-permission-section">
-                <h3>📷 カメラ機能について</h3>
-                <p>写真撮影機能を使用するには、カメラへのアクセス許可が必要です。</p>
+            <label for="photo-section">3. 現場の写真 (任意)</label>
+            <div id="photo-section">
                 
-                <div id="permission-status" class="permission-status checking">
-                    <span class="permission-status-icon">🔍</span>
-                    <span>権限状態を確認中...</span>
+                <!-- カメラ権限セクション -->
+                <div class="camera-permission-section">
+                    <h3>📷 カメラ機能について</h3>
+                    <p>写真撮影機能を使用するには、カメラへのアクセス許可が必要です。</p>
+                    
+                    <div id="permission-status" class="permission-status checking">
+                        <span class="permission-status-icon">🔍</span>
+                        <span>権限状態を確認中...</span>
+                    </div>
+                    
+                    <button type="button" id="request-camera-permission" class="btn btn-secondary">
+                        📷 カメラ権限を要求
+                    </button>
+                    
+                    <button type="button" id="start-camera-btn" class="btn btn-primary" style="display: none;">
+                        📷 カメラで撮影
+                    </button>
                 </div>
-                
-                <button type="button" id="request-camera-permission" class="btn btn-secondary">
-                    📷 カメラ権限を要求
-                </button>
-                
-                <button type="button" id="start-camera-btn" class="btn btn-primary" style="display: none;">
-                    📷 カメラで撮影
-                </button>
-            </div>
 
-            <!-- ファイル選択 -->
-            <div class="file-input-section">
-                <input type="file" id="photo" name="photo" accept="image/*" class="file-input">
-                <label for="photo" class="file-input-label">
-                    📁 ファイルを選択
-                </label>
-            </div>
+                <!-- ファイル選択 -->
+                <div class="file-input-section">
+                    <input type="file" id="photo" name="photo" accept="image/*" class="file-input">
+                    <label for="photo" class="file-input-label">
+                        📁 ファイルを選択
+                    </label>
+                </div>
 
-            <!-- 画像プレビュー -->
-            <img id="image-preview" class="image-preview" style="display: none;" alt="選択された画像">
+                <!-- 画像プレビュー -->
+                <img id="image-preview" class="image-preview" style="display: none;" alt="選択された画像">
+            </div>
         </div>
         
         <div class="form-group">
-            <label>4. 異状のある場所</label>
+            <label for="map">4. 異状のある場所</label>
             <div id="map-wrapper">
-                <div id="map"></div>
-                <div id="center-pin">📍</div>
+                <div id="map" role="application" aria-label="位置選択用地図"></div>
+                <div id="center-pin" aria-hidden="true">📍</div>
             </div>
             <div id="coords-display">地図を動かして位置を合わせてください</div>
         </div>
@@ -115,10 +120,12 @@
 </div>
 
 <!-- カメラモーダル -->
-<div id="camera-modal" class="camera-modal hidden">
+<div id="camera-modal" class="camera-modal hidden" role="dialog" aria-labelledby="camera-modal-title">
     <div class="camera-modal-content">
+        <h3 id="camera-modal-title">カメラ撮影</h3>
+        
         <div id="video-wrapper" class="video-wrapper hidden">
-            <video id="camera-stream" autoplay playsinline></video>
+            <video id="camera-stream" autoplay playsinline aria-label="カメラ映像"></video>
         </div>
         
         <div id="camera-error-view" class="camera-error-view hidden">
@@ -138,7 +145,7 @@
         </div>
     </div>
     
-    <canvas id="camera-canvas" style="display: none;"></canvas>
+    <canvas id="camera-canvas" style="display: none;" aria-hidden="true"></canvas>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

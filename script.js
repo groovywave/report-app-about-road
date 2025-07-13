@@ -1,9 +1,9 @@
-// script.js - 最終修正版（CORSエラー・TypeError解決）
+// script.js - CSP完全対応版
 
 // ▼▼▼【重要】設定値を更新してください ▼▼▼
 const CONFIG = {
   GAS_WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbz-em0Wk0cxx4yFT7JHLM_4AjkS6o4rowxdfA1lfa6xlwL9pbN5Nwd5x6qXJMyD5DEWIg/exec',
-  LIFF_ID: '2007739464-gVVMBAQR',
+  LIFF_ID: '2007739464-gVVMBAQR', // 実際のLIFF IDに変更してください
   MAX_RETRY_ATTEMPTS: 3,
   RETRY_DELAY: 1000,
   REQUEST_TIMEOUT: 30000,
@@ -54,11 +54,17 @@ function showNotification(message, type) {
   document.body.appendChild(notification);
 
   // 5秒後に削除
-  setTimeout(function () {
+  const timeoutId = window.setTimeout(function () {
     if (notification.parentNode) {
       notification.remove();
     }
   }, 5000);
+
+  // クリックで即座に削除
+  notification.addEventListener('click', function () {
+    window.clearTimeout(timeoutId);
+    notification.remove();
+  });
 }
 
 function updateLineStatus(type, message) {
@@ -73,7 +79,7 @@ function updateLineStatus(type, message) {
 
   // 成功時は5秒後に非表示
   if (type === 'success') {
-    setTimeout(function () {
+    window.setTimeout(function () {
       statusElement.classList.add('hidden');
     }, 5000);
   }
@@ -115,9 +121,10 @@ function updatePhoto(data, mimeType) {
 // ===== LIFF関連関数 =====
 
 function initializeLiff() {
+  // LIFF IDの検証
   if (!CONFIG.LIFF_ID || CONFIG.LIFF_ID === '2007739464-gVVMBAQR') {
     console.warn('LIFF IDが設定されていません');
-    updateLineStatus('warning', 'LIFF設定が必要です');
+    updateLineStatus('warning', 'LIFF設定が必要です - 実際のLIFF IDを設定してください');
     return;
   }
 
@@ -147,7 +154,7 @@ function initializeLiff() {
       })
       .catch(function (error) {
         console.error('LIFF初期化エラー:', error);
-        updateLineStatus('error', 'LINE連携エラー');
+        updateLineStatus('error', 'LINE連携エラー: ' + error.message);
 
         // 自動ログインを試行
         try {
@@ -538,7 +545,7 @@ function sendDataWithRetry(formData, attempt) {
 
   return new Promise(function (resolve, reject) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(function () {
+    const timeoutId = window.setTimeout(function () {
       controller.abort();
     }, CONFIG.REQUEST_TIMEOUT);
 
@@ -553,7 +560,7 @@ function sendDataWithRetry(formData, attempt) {
       signal: controller.signal
     })
       .then(function (response) {
-        clearTimeout(timeoutId);
+        window.clearTimeout(timeoutId);
 
         if (!response.ok) {
           throw new Error('サーバーエラー: ' + response.status + ' ' + response.statusText);
@@ -570,11 +577,11 @@ function sendDataWithRetry(formData, attempt) {
         }
       })
       .catch(function (error) {
-        clearTimeout(timeoutId);
+        window.clearTimeout(timeoutId);
 
         if (attempt < CONFIG.MAX_RETRY_ATTEMPTS && shouldRetry(error)) {
           showNotification('送信に失敗しました。' + (CONFIG.RETRY_DELAY / 1000) + '秒後に再試行します... (' + attempt + '/' + CONFIG.MAX_RETRY_ATTEMPTS + ')', 'warning');
-          setTimeout(function () {
+          window.setTimeout(function () {
             sendDataWithRetry(formData, attempt + 1)
               .then(resolve)
               .catch(reject);
@@ -683,13 +690,13 @@ function initializeApp() {
     initializeLiff();
 
     // 2. 地図初期化（少し遅延）
-    setTimeout(function () {
+    window.setTimeout(function () {
       initializeMap();
       getCurrentLocation();
     }, 100);
 
     // 3. カメラ権限確認
-    setTimeout(function () {
+    window.setTimeout(function () {
       checkCameraPermission();
     }, 200);
 
@@ -710,7 +717,7 @@ document.addEventListener('DOMContentLoaded', function () {
   console.log('ページ読み込み完了');
 
   // 少し遅延させて初期化
-  setTimeout(initializeApp, 200);
+  window.setTimeout(initializeApp, 200);
 });
 
 // ===== エラーハンドリング =====
