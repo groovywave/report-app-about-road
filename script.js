@@ -1,9 +1,9 @@
-// script.js - 改善版（LINEトーク投稿機能付き）
+// script.js - LINE Login channel対応版
 
 // ▼▼▼【重要】設定値を更新してください ▼▼▼
 const CONFIG = {
   GAS_WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbwNJWLULGW0grLHd2gxHgURpEmnLU-XuMbTogUC08xWKx8wkABfe55w45J3AruFz0uYHw/exec',
-  LIFF_ID: 'YOUR_LIFF_ID', // LIFFアプリのIDに変更してください
+  LIFF_ID: '2007739464-gVVMBAQR', // LINE Login channelのLIFF IDに変更
   MAX_RETRY_ATTEMPTS: 3,
   RETRY_DELAY: 1000,
   REQUEST_TIMEOUT: 30000,
@@ -15,6 +15,7 @@ const CONFIG = {
 // グローバル変数
 let currentPhoto = { data: null, mimeType: null };
 let videoStream = null;
+let lineAccessToken = null;
 let lineUserId = null;
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -30,7 +31,8 @@ document.addEventListener('DOMContentLoaded', function() {
     imagePreview: document.getElementById('image-preview'),
     lineStatus: document.getElementById('line-status'),
     lineStatusText: document.getElementById('line-status-text'),
-    lineUserIdInput: document.getElementById('lineUserId'),
+    accessTokenInput: document.getElementById('accessToken'),
+    userIdInput: document.getElementById('userId'),
 
     // カメラ関連
     requestPermissionButton: document.getElementById('request-camera-permission'),
@@ -59,12 +61,12 @@ document.addEventListener('DOMContentLoaded', function() {
   // === フォーム機能の初期化 ===
   initializeFormFeatures(elements);
 
-  // === LIFF初期化関数 ===
+  // === LIFF初期化関数（修正版） ===
   async function initializeLIFF() {
     try {
       console.log('LIFF初期化開始');
 
-      if (CONFIG.LIFF_ID === 'YOUR_LIFF_ID') {
+      if (CONFIG.LIFF_ID === 'LINE Login channelで作成したLIFF ID') {
         console.warn('LIFF_IDが設定されていません');
         updateLineStatus('warning', 'LIFF設定が必要です');
         return;
@@ -74,15 +76,29 @@ document.addEventListener('DOMContentLoaded', function() {
       console.log('LIFF初期化成功');
 
       if (liff.isLoggedIn()) {
+        // アクセストークンを取得
+        lineAccessToken = liff.getAccessToken();
+
+        // プロフィール情報を取得
         const profile = await liff.getProfile();
         lineUserId = profile.userId;
-        elements.lineUserIdInput.value = lineUserId;
+
+        // 隠しフィールドに設定
+        elements.accessTokenInput.value = lineAccessToken;
+        elements.userIdInput.value = lineUserId;
 
         updateLineStatus('success', `LINE連携済み: ${profile.displayName}`);
         console.log('LINEユーザー情報取得成功:', profile);
       } else {
         updateLineStatus('error', 'LINEログインが必要です');
         console.log('LINEログインが必要');
+
+        // 自動ログインを試行
+        try {
+          await liff.login();
+        } catch (loginError) {
+          console.error('自動ログイン失敗:', loginError);
+        }
       }
     } catch (error) {
       console.error('LIFF初期化エラー:', error);
@@ -399,7 +415,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // === フォーム送信処理（統合版） ===
+  // === フォーム送信処理（修正版） ===
   async function handleFormSubmission(formData, elements) {
     try {
       setSubmissionState(true, elements);
@@ -467,7 +483,8 @@ document.addEventListener('DOMContentLoaded', function() {
         details: formData.get('details'),
         photoData: currentPhoto.data,
         photoMimeType: currentPhoto.mimeType,
-        lineUserId: lineUserId, // LINEユーザーIDを追加
+        accessToken: lineAccessToken, // アクセストークンを送信
+        userId: lineUserId, // ユーザーIDも送信（参考用）
         timestamp: new Date().toISOString()
       };
 
