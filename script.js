@@ -2,7 +2,7 @@
 
 // ▼▼▼【重要】設定値を更新してください ▼▼▼
 const CONFIG = {
-  GAS_WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbzjfUcVPIKW4F4T1KaKsSqEAp8pUHgEMg77_S-XvunVDKn6ekyghd9rnsWO2vWzT-gYMw/exec',
+  GAS_WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbx8q5Td3CFag_sqOUGxM49djp3TzrqU0l4xuhMhJR72PFscAm60aUdzPb_EnkBF0GR24A/exec',
   LIFF_ID: '2007739464-gVVMBAQR', // LINE Login channelのLIFF IDに変更
   MAX_RETRY_ATTEMPTS: 3,
   RETRY_DELAY: 1000,
@@ -82,6 +82,10 @@ document.addEventListener('DOMContentLoaded', function() {
         // プロフィール情報を取得
         const profile = await liff.getProfile();
         lineUserId = profile.userId;
+
+        // ↓↓↓ この一行を追加する ↓↓↓
+        console.log('【デバッグ用】取得したアクセストークン:', lineAccessToken);
+        // ↑↑↑ この一行を追加する ↑↑↑
 
         // 隠しフィールドに設定
         elements.accessTokenInput.value = lineAccessToken;
