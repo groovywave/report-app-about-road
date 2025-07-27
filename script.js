@@ -236,7 +236,7 @@ document.addEventListener('DOMContentLoaded', function () {
     notification.style.cssText = `
       position: fixed; top: 20px; right: 20px; padding: 12px 20px;
       border-radius: 4px; color: white; font-weight: bold; z-index: 10000;
-      max-width: 300px; word-wrap: break-word; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      max-width: 300px; word-wrap: break-word; overflow-wrap: break-word; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
       background-color: ${colors[type] || colors.info};
     `;
 
