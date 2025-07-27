@@ -190,10 +190,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     if (elements.cancelButton) {
+      e.preventDefault();
       elements.cancelButton.addEventListener('click', () => stopCamera(elements));
     }
 
     if (elements.captureButton) {
+      e.preventDefault();
       elements.captureButton.addEventListener('click', () => capturePhoto(elements));
     }
   }
