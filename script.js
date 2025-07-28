@@ -190,13 +190,17 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     if (elements.cancelButton) {
-      e.preventDefault();
-      elements.cancelButton.addEventListener('click', () => stopCamera(elements));
+      elements.cancelButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        stopCamera(elements)
+      });
     }
 
     if (elements.captureButton) {
-      e.preventDefault();
-      elements.captureButton.addEventListener('click', () => capturePhoto(elements));
+      elements.captureButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        capturePhoto(elements)
+      });
     }
   }
 
