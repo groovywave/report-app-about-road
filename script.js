@@ -398,17 +398,19 @@ document.addEventListener('DOMContentLoaded', function() {
     showNotification('写真を撮影しました。', 'success');
   }
 
-  // === 写真入力処理 ===
+  // === 写真入力処理（画像圧縮機能付き） ===
   function handlePhotoInput(input, elements) {
     if (input.files && input.files[0]) {
       const file = input.files[0];
 
+      // 元ファイルサイズのチェックはそのまま活かす
       if (file.size > CONFIG.MAX_FILE_SIZE) {
         showNotification('ファイルサイズが大きすぎます。5MB以下のファイルを選択してください。', 'error');
         updatePhoto(null, null, elements);
         return;
       }
 
+      // ファイル形式のチェックもそのまま活かす
       if (!CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) {
         showNotification('対応していないファイル形式です。', 'error');
         updatePhoto(null, null, elements);
@@ -416,11 +418,70 @@ document.addEventListener('DOMContentLoaded', function() {
       }
 
       const reader = new FileReader();
-      reader.onload = (e) => updatePhoto(e.target.result, file.type, elements);
+
+      reader.onload = (e) => {
+        // ★ 元のe.target.resultをImageオブジェクトに読み込ませる
+        const originalBase64 = e.target.result;
+        const img = new Image();
+
+        img.onload = () => {
+          // ★ 圧縮ロジック開始
+          const MAX_WIDTH = 1280; // 長辺の最大ピクセル数を設定（1280pxなら十分高画質）
+          const MAX_HEIGHT = 1280;
+          let width = img.width;
+          let height = img.height;
+
+          // アスペクト比を維持したままリサイズ
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+
+          // canvasを使ってリサイズ後の画像を描画
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // ★ canvasから圧縮された新しいBase64データを取得 (JPEG形式, 品質80%)
+          // PNGに透明色が含まれている場合を考慮し、背景を白で塗りつぶす
+          ctx.globalCompositeOperation = 'destination-over';
+          ctx.fillStyle = '#fff'; // 背景色を白に
+          ctx.fillRect(0, 0, width, height);
+
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.85); // 品質を少し上げて0.85に
+
+          // ★ 圧縮後のデータでUIを更新する
+          // MIMEタイプは 'image/jpeg' になる
+          updatePhoto(compressedBase64, 'image/jpeg', elements);
+
+          // (デバッグ用) 圧縮率を確認
+          console.log(`画像圧縮完了 - 元サイズ: ${Math.round(originalBase64.length / 1024)} KB, 圧縮後サイズ: ${Math.round(compressedBase64.length / 1024)} KB`);
+
+        };
+
+        img.onerror = () => {
+          showNotification('画像データの解析に失敗しました。', 'error');
+          updatePhoto(null, null, elements);
+        };
+
+        // Imageオブジェクトのソースに、読み込んだBase64データを指定
+        img.src = originalBase64;
+      };
+
       reader.onerror = () => {
         showNotification('ファイルの読み込みに失敗しました。', 'error');
         updatePhoto(null, null, elements);
       };
+
       reader.readAsDataURL(file);
     }
   }
