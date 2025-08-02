@@ -218,6 +218,13 @@ h2 {
   font-size: 16px;
 }
 
+.label-note {
+  font-size: 12px;
+  font-weight: normal;
+  color: #e74c3c; /* 少し目立つ色に */
+  margin-left: 8px;
+}
+
 /* ===== ラジオボタン（改善版） ===== */
 .radio-group {
   display: flex;

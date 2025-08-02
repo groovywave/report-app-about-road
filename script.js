@@ -33,6 +33,9 @@ document.addEventListener('DOMContentLoaded', function() {
     lineStatusText: document.getElementById('line-status-text'),
     accessTokenInput: document.getElementById('accessToken'),
     userIdInput: document.getElementById('userId'),
+    detailsTextarea: document.getElementById('details'), // 詳細テキストエリア
+    detailsRequiredNote: document.getElementById('details-required-note'), // 注釈用span
+    typeRadios: document.querySelectorAll('input[name="type"]'), // 異常の種類ラジオボタン（すべて）
 
     // カメラ関連
     requestPermissionButton: document.getElementById('request-camera-permission'),
@@ -206,6 +209,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // === フォーム機能初期化 ===
   function initializeFormFeatures(elements) {
+
+    // 「その他」選択時に詳細を必須にするためのイベントリスナー
+    elements.typeRadios.forEach(radio => {
+      radio.addEventListener('change', handleTypeChange);
+    });
+
+    // 初期状態のチェックも実行
+    handleTypeChange();
+
     // 写真プレビュー
     elements.photoInput.addEventListener('change', function() {
       handlePhotoInput(this, elements);
@@ -220,6 +232,26 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   }
+
+  // 「異常の種類」が変更されたときのハンドラ関数
+  function handleTypeChange() {
+    const elements = { // この関数内で使う要素を再定義
+      detailsTextarea: document.getElementById('details'),
+      detailsRequiredNote: document.getElementById('details-required-note'),
+      otherRadio: document.getElementById('type-other') // 「その他」のラジオボタン
+    };
+
+    if (elements.otherRadio && elements.otherRadio.checked) {
+      // 「その他」が選択されている場合
+      elements.detailsTextarea.required = true;
+      elements.detailsRequiredNote.textContent = '（必須入力）';
+    } else {
+      // 「その他」以外が選択されている場合
+      elements.detailsTextarea.required = false;
+      elements.detailsRequiredNote.textContent = '';
+    }
+  }
+
 
   // === 共通ユーティリティ関数 ===
 
@@ -528,6 +560,17 @@ document.addEventListener('DOMContentLoaded', function() {
           message: field.name.includes('itude')
             ? '場所が指定されていません。地図を動かして位置を合わせてください。'
             : `${field.label}が入力されていません。`
+        };
+      }
+    }
+
+    // 「その他」が選択されている場合のみ、詳細を必須チェックする
+    if (formData.get('type') === 'その他') {
+      const details = formData.get('details');
+      if (!details || details.trim() === '') {
+        return {
+          isValid: false,
+          message: '「その他」を選択した場合は、詳細を必ず入力してください。'
         };
       }
     }
