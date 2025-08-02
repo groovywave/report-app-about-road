@@ -311,9 +311,9 @@ document.addEventListener('DOMContentLoaded', function() {
       if (navigator.permissions) {
         const permission = await navigator.permissions.query({ name: 'camera' });
         const messages = {
-          granted: 'カメラアクセスが許可されています',
-          denied: 'カメラアクセスが拒否されています',
-          prompt: 'カメラ権限が未設定です'
+          granted: 'カメラ利用可',
+          denied: 'カメラ利用不可',
+          prompt: 'カメラ未設定'
         };
         updatePermissionStatus(elements, permission.state, messages[permission.state] || '権限状態が不明です');
         return permission.state;
@@ -364,14 +364,14 @@ document.addEventListener('DOMContentLoaded', function() {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
       stream.getTracks().forEach(track => track.stop());
 
-      updatePermissionStatus(elements, 'granted', 'カメラ権限が正常に設定されました！');
-      showNotification('カメラ権限が正常に設定されました。', 'success');
+      updatePermissionStatus(elements, 'granted', 'カメラが使えます！');
+      showNotification('カメラ利用可', 'success');
       return 'granted';
     } catch (error) {
       const errorMessages = {
-        NotAllowedError: 'カメラアクセスが拒否されました。ブラウザの設定で許可してください。',
-        NotFoundError: 'カメラデバイスが見つかりません。',
-        NotSupportedError: 'このブラウザではカメラがサポートされていません。'
+        NotAllowedError: 'カメラ利用不可',
+        NotFoundError: 'カメラデ利用不可',
+        NotSupportedError: 'カメラ利用不可'
       };
       const message = errorMessages[error.name] || `エラー: ${error.message}`;
       updatePermissionStatus(elements, 'denied', message);
