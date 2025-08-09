@@ -13,7 +13,11 @@ const CONFIG = {
 // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
 // グローバル変数
-let currentPhoto = { data: null, mimeType: null };
+let currentPhotos = {
+  distant: { data: null, mimeType: null },
+  close: { data: null, mimeType: null }
+};
+let activePhotoSlot = null; // 'distant' | 'close'
 let videoStream = null;
 let lineAccessToken = null;
 let lineUserId = null;
@@ -27,12 +31,13 @@ document.addEventListener('DOMContentLoaded', function() {
     lngInput: document.getElementById('longitude'),
     form: document.getElementById('report-form'),
     loader: document.getElementById('loader'),
-    photoInput: document.getElementById('photo'),
-    imagePreview: document.getElementById('image-preview'),
+    // 写真（2枠）
+    photoInputDistant: document.getElementById('photo-distant'),
+    photoInputClose: document.getElementById('photo-close'),
+    imagePreviewDistant: document.getElementById('image-preview-distant'),
+    imagePreviewClose: document.getElementById('image-preview-close'),
     lineStatus: document.getElementById('line-status'),
     lineStatusText: document.getElementById('line-status-text'),
-    accessTokenInput: document.getElementById('accessToken'),
-    userIdInput: document.getElementById('userId'),
     detailsTextarea: document.getElementById('details'), // 詳細テキストエリア
     detailsRequiredNote: document.getElementById('details-required-note'), // 注釈用span
     typeRadios: document.querySelectorAll('input[name="type"]'), // 異常の種類ラジオボタン（すべて）
@@ -40,7 +45,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // カメラ関連
     requestPermissionButton: document.getElementById('request-camera-permission'),
     permissionStatus: document.getElementById('permission-status'),
-    startCameraButton: document.getElementById('start-camera-btn'),
+    startCameraButtonDistant: document.getElementById('start-camera-btn-distant'),
+    startCameraButtonClose: document.getElementById('start-camera-btn-close'),
     cameraModal: document.getElementById('camera-modal'),
     videoWrapper: document.getElementById('video-wrapper'),
     videoElement: document.getElementById('camera-stream'),
@@ -86,13 +92,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const profile = await liff.getProfile();
         lineUserId = profile.userId;
 
-        // ↓↓↓ この一行を追加する ↓↓↓
-        console.log('【デバッグ用】取得したアクセストークン:', lineAccessToken);
-        // ↑↑↑ この一行を追加する ↑↑↑
-
-        // 隠しフィールドに設定
-        elements.accessTokenInput.value = lineAccessToken;
-        elements.userIdInput.value = lineUserId;
+        // 機微情報はログ出力・DOM格納しない
 
         updateLineStatus('success', `LINE連携済み: ${profile.displayName}`);
         console.log('LINEユーザー情報取得成功:', profile);
@@ -163,8 +163,11 @@ document.addEventListener('DOMContentLoaded', function() {
   // === カメラ機能初期化 ===
   function initializeCameraFeatures(elements) {
     // 初期状態ではカメラボタンを非表示
-    if (elements.startCameraButton) {
-      elements.startCameraButton.style.display = 'none';
+    if (elements.startCameraButtonDistant) {
+      elements.startCameraButtonDistant.style.display = 'none';
+    }
+    if (elements.startCameraButtonClose) {
+      elements.startCameraButtonClose.style.display = 'none';
     }
 
     // 権限確認
@@ -178,9 +181,17 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     }
 
-    if (elements.startCameraButton) {
-      elements.startCameraButton.addEventListener('click', (e) => {
+    if (elements.startCameraButtonDistant) {
+      elements.startCameraButtonDistant.addEventListener('click', (e) => {
         e.preventDefault();
+        activePhotoSlot = 'distant';
+        startCamera(elements);
+      });
+    }
+    if (elements.startCameraButtonClose) {
+      elements.startCameraButtonClose.addEventListener('click', (e) => {
+        e.preventDefault();
+        activePhotoSlot = 'close';
         startCamera(elements);
       });
     }
@@ -218,10 +229,18 @@ document.addEventListener('DOMContentLoaded', function() {
     // 初期状態のチェックも実行
     handleTypeChange();
 
-    // 写真プレビュー
-    elements.photoInput.addEventListener('change', function() {
-      handlePhotoInput(this, elements);
-    });
+    // 写真プレビュー（遠景）
+    if (elements.photoInputDistant) {
+      elements.photoInputDistant.addEventListener('change', function() {
+        handlePhotoInput(this, elements, 'distant');
+      });
+    }
+    // 写真プレビュー（近景）
+    if (elements.photoInputClose) {
+      elements.photoInputClose.addEventListener('change', function() {
+        handlePhotoInput(this, elements, 'close');
+      });
+    }
 
     // フォーム送信
     elements.form.addEventListener('submit', function(e) {
@@ -282,19 +301,25 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(() => notification.remove(), 5000);
   }
 
-  // 写真データ更新（統合版）
-  function updatePhoto(data, mimeType, elements) {
-    currentPhoto.data = data;
-    currentPhoto.mimeType = mimeType;
+  // 写真データ更新（2枠対応）
+  function updatePhoto(slot, data, mimeType, elements) {
+    if (!['distant', 'close'].includes(slot)) return;
+    currentPhotos[slot].data = data;
+    currentPhotos[slot].mimeType = mimeType;
 
-    if (data && mimeType) {
-      elements.imagePreview.src = data;
-      elements.imagePreview.style.display = 'block';
-    } else {
-      elements.imagePreview.src = '#';
-      elements.imagePreview.style.display = 'none';
+    const preview = slot === 'distant' ? elements.imagePreviewDistant : elements.imagePreviewClose;
+    const input = slot === 'distant' ? elements.photoInputDistant : elements.photoInputClose;
+
+    if (preview) {
+      if (data && mimeType) {
+        preview.src = data;
+        preview.style.display = 'block';
+      } else {
+        preview.src = '#';
+        preview.style.display = 'none';
+      }
     }
-    elements.photoInput.value = '';
+    if (input) input.value = '';
   }
 
   // === カメラ関連関数（統合・簡略化版） ===
@@ -346,9 +371,12 @@ document.addEventListener('DOMContentLoaded', function() {
       <span>${prefixes[state] || '❓'} ${message}</span>
     `;
 
-    // カメラボタンの表示制御
-    if (elements.startCameraButton) {
-      elements.startCameraButton.style.display = state === 'granted' ? 'block' : 'none';
+    // カメラボタンの表示制御（2枠）
+    if (elements.startCameraButtonDistant) {
+      elements.startCameraButtonDistant.style.display = state === 'granted' ? 'block' : 'none';
+    }
+    if (elements.startCameraButtonClose) {
+      elements.startCameraButtonClose.style.display = state === 'granted' ? 'block' : 'none';
     }
   }
 
@@ -425,27 +453,28 @@ document.addEventListener('DOMContentLoaded', function() {
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-    updatePhoto(dataUrl, 'image/jpeg', elements);
+    const slot = activePhotoSlot || 'distant';
+    updatePhoto(slot, dataUrl, 'image/jpeg', elements);
     stopCamera(elements);
     showNotification('写真を撮影しました。', 'success');
   }
 
   // === 写真入力処理（画像圧縮機能付き） ===
-  function handlePhotoInput(input, elements) {
+  function handlePhotoInput(input, elements, slot) {
     if (input.files && input.files[0]) {
       const file = input.files[0];
 
       // 元ファイルサイズのチェックはそのまま活かす
       if (file.size > CONFIG.MAX_FILE_SIZE) {
         showNotification('ファイルサイズが大きすぎます。5MB以下のファイルを選択してください。', 'error');
-        updatePhoto(null, null, elements);
+        updatePhoto(slot, null, null, elements);
         return;
       }
 
       // ファイル形式のチェックもそのまま活かす
       if (!CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) {
         showNotification('対応していないファイル形式です。', 'error');
-        updatePhoto(null, null, elements);
+        updatePhoto(slot, null, null, elements);
         return;
       }
 
@@ -493,7 +522,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
           // ★ 圧縮後のデータでUIを更新する
           // MIMEタイプは 'image/jpeg' になる
-          updatePhoto(compressedBase64, 'image/jpeg', elements);
+          updatePhoto(slot, compressedBase64, 'image/jpeg', elements);
 
           // (デバッグ用) 圧縮率を確認
           console.log(`画像圧縮完了 - 元サイズ: ${Math.round(originalBase64.length / 1024)} KB, 圧縮後サイズ: ${Math.round(compressedBase64.length / 1024)} KB`);
@@ -502,8 +531,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
         img.onerror = () => {
           showNotification('画像データの解析に失敗しました。', 'error');
-          updatePhoto(null, null, elements);
-        };
+          updatePhoto(slot, null, null, elements);
+      };
 
         // Imageオブジェクトのソースに、読み込んだBase64データを指定
         img.src = originalBase64;
@@ -511,7 +540,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
       reader.onerror = () => {
         showNotification('ファイルの読み込みに失敗しました。', 'error');
-        updatePhoto(null, null, elements);
+        updatePhoto(slot, null, null, elements);
       };
 
       reader.readAsDataURL(file);
@@ -535,7 +564,8 @@ document.addEventListener('DOMContentLoaded', function() {
       // 成功処理
       showNotification('通報を受け付けました。ご協力ありがとうございます。', 'success');
       elements.form.reset();
-      updatePhoto(null, null, elements);
+      updatePhoto('distant', null, null, elements);
+      updatePhoto('close', null, null, elements);
 
     } catch (error) {
       console.error('送信エラー:', error);
@@ -595,8 +625,10 @@ document.addEventListener('DOMContentLoaded', function() {
         longitude: formData.get('longitude'),
         type: formData.get('type'),
         details: formData.get('details'),
-        photoData: currentPhoto.data,
-        photoMimeType: currentPhoto.mimeType,
+        photoDistantData: currentPhotos.distant.data,
+        photoDistantMimeType: currentPhotos.distant.mimeType,
+        photoCloseData: currentPhotos.close.data,
+        photoCloseMimeType: currentPhotos.close.mimeType,
         accessToken: lineAccessToken, // アクセストークンを送信
         userId: lineUserId, // ユーザーIDも送信（参考用）
         timestamp: new Date().toISOString()
@@ -662,4 +694,3 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 });
-
