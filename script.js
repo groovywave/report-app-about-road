@@ -2,7 +2,7 @@
 
 // ▼▼▼【重要】設定値を更新してください ▼▼▼
 const CONFIG = {
-  GAS_WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbyS8ZHilLYVXt1IK1b-PC_EQc3sU3U6AFmkYeIMFs9-RLeyrIGtRiBjXcND-IRPKdzMYQ/exec',
+  GAS_WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbz6cFAPUgj4Dp5xjKlfzsD93w8nKId5y0Jxf7STJpY2N770TWsonhW09cF8v_XzWO_sow/exec',
   LIFF_ID: '2007739464-gVVMBAQR', // LINE Login channelのLIFF IDに変更
   MAX_RETRY_ATTEMPTS: 3,
   RETRY_DELAY: 1000,
@@ -22,7 +22,7 @@ let videoStream = null;
 let lineAccessToken = null;
 let lineUserId = null;
 
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', function() {
   // 要素の取得
   const elements = {
     map: L.map('map').setView([36.871, 140.016], 16),
@@ -149,10 +149,10 @@ document.addEventListener('DOMContentLoaded', function () {
     // 現在位置の取得
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        function (pos) {
+        function(pos) {
           elements.map.setView([pos.coords.latitude, pos.coords.longitude], 18);
         },
-        function (error) {
+        function(error) {
           console.warn('位置情報の取得に失敗しました:', error);
           showNotification('位置情報の取得に失敗しました。手動で位置を調整してください。', 'warning');
         }
@@ -231,19 +231,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // 写真プレビュー（遠景）
     if (elements.photoInputDistant) {
-      elements.photoInputDistant.addEventListener('change', function () {
+      elements.photoInputDistant.addEventListener('change', function() {
         handlePhotoInput(this, elements, 'distant');
       });
     }
     // 写真プレビュー（近景）
     if (elements.photoInputClose) {
-      elements.photoInputClose.addEventListener('change', function () {
+      elements.photoInputClose.addEventListener('change', function() {
         handlePhotoInput(this, elements, 'close');
       });
     }
 
     // フォーム送信
-    elements.form.addEventListener('submit', function (e) {
+    elements.form.addEventListener('submit', function(e) {
       e.preventDefault();
       if (!elements.loader.classList.contains('sending')) {
         const formData = new FormData(this);
