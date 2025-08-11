@@ -2,7 +2,7 @@
 
 // ▼▼▼【重要】設定値を更新してください ▼▼▼
 const CONFIG = {
-  GAS_WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbzH-0YvfUQWUYV5s4iyfHdupATIhiUQ_AbupSSOmnyXw0foBU3VQPzAhjRo_YlzpWHQug/exec',
+  GAS_WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbzO8wFryuEf7xOGNMWzO1RKuxLZ3Vc3LSOn0SEGrDgzUF9AQsi9BUQHzxNg5ZAH3uV6eQ/exec',
   LIFF_ID: '2007739464-gVVMBAQR', // LINE Login channelのLIFF IDに変更
   MAX_RETRY_ATTEMPTS: 3,
   RETRY_DELAY: 1000,
