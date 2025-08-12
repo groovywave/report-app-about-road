@@ -1,0 +1,621 @@
+/**
+ * 道路通報システム用Google Apps Script（2枚写真対応・ログ出力版）
+ * - 近景/遠景の2枚写真に対応（どちらか一方のみでも可）
+ * - 既存の単一写真（photoData）にも互換対応
+ * - レスポンスにログを含める + スプレッドシートログ出力対応
+ */
+
+// ▼▼▼【重要】設定値を更新してください ▼▼▼
+const CONFIG = {
+  SPREADSHEET_ID: '1r-O3ET_q9V7XmhMBV8hVh4gn9Y0WVTzT90fyqMMf87s',
+  // Messaging APIチャネルのアクセストークン
+  LINE_MESSAGING_ACCESS_TOKEN: '9k7iD29i3nWCQf3jPMhMRjKwRo18B25UlmOz7ha7YPDC6WF2qQXW4moVmJx8LCxz5GZ7j+Hd2Qfy+XImlGjJBDzcQeH7bq5iJd04VNyDctjyu5wfuKdMbVjtD2nk0yFJRbA1wn0pKpPW0mZL32srRQdB04t89/1O/w1cDnyilFU=', // ← 実際のアクセストークンに変更
+  // LINE Login channelの設定
+  LINE_LOGIN_CHANNEL_ID: '2007739464', // ← 実際のチャネルIDに変更
+  LINE_LOGIN_CHANNEL_SECRET: 'b8edd5e88b4d19090c6c24c6a1041f17', // ← 実際のシークレットに変更
+  // API URL
+  LINE_MESSAGING_API_URL: 'https://api.line.me/v2/bot/message/push',
+  LINE_PROFILE_API_URL: 'https://api.line.me/v2/profile',
+  LINE_VERIFY_TOKEN_URL: 'https://api.line.me/oauth2/v2.1/verify',
+  // Google Drive設定
+  DRIVE_FOLDER_ID: '1gIWfzC6mSI3fjwbiDR--vucBnogsrGWv', // ← 実際のDriveフォルダIDに変更
+  // ログ出力設定
+  LOG_TO_RESPONSE: true, // レスポンスにログを含める
+  LOG_TO_SPREADSHEET: true // スプレッドシートにログ出力（オプション）
+};
+// ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
+// ログ収集用配列
+let debugLogs = [];
+
+/**
+ * ログ出力関数（console.log + 配列に保存 + 任意でスプレッドシート）
+ */
+function log(message, data = null) {
+  const timestamp = new Date().toISOString();
+  let logMessage = message;
+  let logData = data;
+
+  if (data instanceof Error) {
+    logData = {
+      message: data.message,
+      name: data.name,
+      stack: data.stack,
+      fileName: data.fileName,
+      lineNumber: data.lineNumber
+    };
+    logMessage = `${message}: ${data.message}`;
+  }
+
+  const logEntry = { timestamp, message: logMessage, data: logData };
+
+  if (logData !== null && logData !== undefined) {
+    console.log(`[${timestamp}] ${logMessage}:`, logData);
+  } else {
+    console.log(`[${timestamp}] ${logMessage}`);
+  }
+
+  debugLogs.push(logEntry);
+
+  if (CONFIG.LOG_TO_SPREADSHEET) {
+    try {
+      logToSpreadsheet(logMessage, logData);
+    } catch (error) {
+      console.error('スプレッドシートログ出力エラー:', error);
+    }
+  }
+}
+
+/**
+ * スプレッドシートの数式インジェクション対策 – 値を安全なテキストに変換
+ */
+function toSheetText(v) {
+  if (v === null || v === undefined) return '';
+  if (typeof v === 'object') v = JSON.stringify(v, null, 2);
+  else v = String(v);
+  if (/^[=+\-@]/.test(v)) return "'" + v;
+  return v;
+}
+
+/**
+ * GET（疎通と設定確認）
+ */
+function doGet(e) {
+  try {
+    debugLogs = [];
+    log('[1] === GET request received ===');
+
+    const configStatus = {
+      hasSpreadsheetId: !!CONFIG.SPREADSHEET_ID,
+      hasLineToken: CONFIG.LINE_MESSAGING_ACCESS_TOKEN !== 'LINE_CHANNEL_ACCESS_TOKEN',
+      hasChannelId: CONFIG.LINE_LOGIN_CHANNEL_ID !== 'LINE_LOGIN_CHANNEL_ID',
+      hasChannelSecret: CONFIG.LINE_LOGIN_CHANNEL_SECRET !== 'LINE_LOGIN_CHANNEL_SECRET',
+      hasDriveFolderId: CONFIG.DRIVE_FOLDER_ID !== 'DRIVE_FOLDER_ID'
+    };
+    log('[2] 設定状況確認', configStatus);
+
+    const detailConfig = {
+      spreadsheetId: CONFIG.SPREADSHEET_ID,
+      lineTokenConfigured: CONFIG.LINE_MESSAGING_ACCESS_TOKEN !== 'LINE_CHANNEL_ACCESS_TOKEN',
+      lineTokenPrefix: CONFIG.LINE_MESSAGING_ACCESS_TOKEN.substring(0, 10) + '...',
+      channelId: CONFIG.LINE_LOGIN_CHANNEL_ID,
+      channelIdConfigured: CONFIG.LINE_LOGIN_CHANNEL_ID !== 'LINE_LOGIN_CHANNEL_ID',
+      driveFolderId: CONFIG.DRIVE_FOLDER_ID,
+      driveFolderConfigured: CONFIG.DRIVE_FOLDER_ID !== 'DRIVE_FOLDER_ID'
+    };
+    log('[3] 詳細設定情報', detailConfig);
+
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'success',
+      message: 'API is working',
+      timestamp: new Date().toISOString(),
+      config: configStatus,
+      detailConfig,
+      logs: CONFIG.LOG_TO_RESPONSE ? debugLogs : []
+    })).setMimeType(ContentService.MimeType.JSON);
+
+  } catch (error) {
+    log('[4] GET request error', error);
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'error',
+      message: error.toString(),
+      logs: CONFIG.LOG_TO_RESPONSE ? debugLogs : []
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+/**
+ * data URLからMIMEタイプを抽出
+ */
+function getMimeFromDataUrl(dataUrl) {
+  try {
+    const semi = dataUrl.indexOf(';');
+    const header = dataUrl.substring(5, semi); // image/jpeg
+    return header;
+  } catch (e) {
+    return 'image/jpeg';
+  }
+}
+
+/**
+ * 受け取ったデータを検証・サニタイズ
+ * - 位置・種別は必須
+ * - 画像は任意（近景/遠景/従来の単一）いずれもサイズとMIMEを検証
+ */
+function validateAndSanitizeData(rawData) {
+  const latitude = parseFloat(rawData.latitude);
+  const longitude = parseFloat(rawData.longitude);
+  if (isNaN(latitude) || isNaN(longitude) || !rawData.type) {
+    throw new Error('必須フィールド（緯度、経度、種別）が無効または不足しています。');
+  }
+
+  // 画像検証（共通）
+  const MAX_PHOTO_LENGTH = 5 * 1024 * 1024 * 1.5; // base64倍率考慮
+  const allowedTypes = ['jpeg', 'png', 'gif', 'webp'];
+
+  function validateDataUrlImage(fieldName, dataUrl) {
+    if (!dataUrl) return null; // 任意
+    if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) {
+      throw new Error(`${fieldName}: 無効な画像データ形式です。`);
+    }
+    if (dataUrl.length > MAX_PHOTO_LENGTH) {
+      throw new Error(`${fieldName}: 画像サイズが大きすぎます（5MB以下）。`);
+    }
+    const mime = getMimeFromDataUrl(dataUrl);
+    if (!allowedTypes.some(t => mime.includes(t))) {
+      throw new Error(`${fieldName}: 許可されていない画像形式です: ${mime}`);
+    }
+    return mime; // OK
+  }
+
+  // 従来の単一
+  const photoMimeType = rawData.photoData ? validateDataUrlImage('photoData', rawData.photoData) : null;
+  // 近景/遠景（新規）
+  const photoNearMimeType = rawData.photoNearData ? validateDataUrlImage('photoNearData', rawData.photoNearData) : null;
+  const photoFarMimeType = rawData.photoFarData ? validateDataUrlImage('photoFarData', rawData.photoFarData) : null;
+
+  const sanitizedData = {
+    latitude,
+    longitude,
+    type: sanitizeText(rawData.type),
+    details: rawData.details ? sanitizeText(rawData.details) : '',
+    // 従来互換
+    photoData: rawData.photoData || null,
+    photoMimeType: photoMimeType,
+    // 新フィールド
+    photoNearData: rawData.photoNearData || null,
+    photoNearMimeType: photoNearMimeType,
+    photoFarData: rawData.photoFarData || null,
+    photoFarMimeType: photoFarMimeType,
+    // LINE連携
+    accessToken: rawData.accessToken || null,
+    userId: rawData.userId ? sanitizeText(String(rawData.userId)) : ''
+  };
+
+  return sanitizedData;
+}
+
+/**
+ * 文字列サニタイズ
+ */
+function sanitizeText(text) {
+  if (typeof text !== 'string') return text;
+  return text.replace(/&/g, '&amp;')
+             .replace(/</g, '&lt;')
+             .replace(/>/g, '&gt;')
+             .replace(/"/g, '&quot;')
+             .replace(/'/g, '&#39;');
+}
+
+/**
+ * POST（2枚対応）
+ */
+function doPost(e) {
+  try {
+    debugLogs = [];
+    log('[5] === POST request received ===');
+
+    if (!e.postData || !e.postData.contents) {
+      throw new Error('POSTデータが見つかりません');
+    }
+
+    const rawData = JSON.parse(e.postData.contents);
+    log('[6] Request data received (keys)', { dataKeys: Object.keys(rawData) });
+
+    log('[7] === 1. データ検証とサニタイズ開始 ===');
+    const validatedData = validateAndSanitizeData(rawData);
+    log('[8] データ検証・サニタイズ完了');
+
+    // 2. スプレッドシート保存（写真のDrive保存を含む）
+    log('[9] === 2. スプレッドシートに保存開始 ===');
+    const saveResult = saveToSpreadsheet(validatedData);
+    log('[10] スプレッドシート保存結果', saveResult);
+
+    // 3. LINE通知（任意）
+    log('[11] === 3. LINEトーク投稿チェック開始 ===');
+    let lineResult = null;
+
+    const lineConfig = {
+      hasAccessToken: !!validatedData.accessToken,
+      hasMessagingToken: CONFIG.LINE_MESSAGING_ACCESS_TOKEN && CONFIG.LINE_MESSAGING_ACCESS_TOKEN !== 'LINE_CHANNEL_ACCESS_TOKEN',
+      hasChannelId: CONFIG.LINE_LOGIN_CHANNEL_ID && CONFIG.LINE_LOGIN_CHANNEL_ID !== 'LINE_LOGIN_CHANNEL_ID'
+    };
+    log('[12] LINE設定状況', lineConfig);
+
+    if (lineConfig.hasAccessToken && lineConfig.hasMessagingToken && lineConfig.hasChannelId) {
+      log('[13] === LINE投稿条件を満たしています。投稿を開始します ===');
+      try {
+        log('[14] ユーザーID取得開始');
+        const userId = getUserIdFromAccessToken(validatedData.accessToken);
+        log('[15] ユーザーID取得成功', { userId });
+
+        if (userId) {
+          log('[16] LINE投稿開始');
+          lineResult = sendLineMessage(userId, validatedData, saveResult);
+          log('[17] LINE投稿成功', lineResult);
+        } else {
+          log('[18] ユーザーIDが取得できませんでした');
+        }
+      } catch (lineError) {
+        log('[19] LINE投稿エラー', lineError);
+      }
+    } else {
+      log('[20] === LINE投稿条件を満たしていません。スキップします ===');
+    }
+
+    // 成功レスポンス
+    const response = {
+      status: 'success',
+      message: '通報を受け付けました。ご協力ありがとうございます。',
+      timestamp: new Date().toISOString(),
+      id: saveResult.id,
+      lineNotified: lineResult !== null,
+      imageUploaded: !!(saveResult.photoNearUrl || saveResult.photoFarUrl),
+      photoNearUrl: saveResult.photoNearUrl || '',
+      photoFarUrl: saveResult.photoFarUrl || '',
+      logs: CONFIG.LOG_TO_RESPONSE ? debugLogs : []
+    };
+    log('[21] 最終レスポンス準備完了', { status: response.status });
+
+    return ContentService.createTextOutput(JSON.stringify(response))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch (error) {
+    log('[22] doPost 全体エラー', error);
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'error',
+      message: 'データの処理に失敗しました: ' + error.toString(),
+      timestamp: new Date().toISOString(),
+      logs: CONFIG.LOG_TO_RESPONSE ? debugLogs : []
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+/**
+ * アクセストークンからユーザーID取得
+ */
+function getUserIdFromAccessToken(accessToken) {
+  try {
+    log('[23] === ユーザーID取得処理開始 ===');
+
+    // 1. トークン検証
+    log('[24] アクセストークン検証API呼び出し開始');
+    const verifyResponse = UrlFetchApp.fetch(
+      `${CONFIG.LINE_VERIFY_TOKEN_URL}?access_token=${accessToken}`,
+      { method: 'GET', muteHttpExceptions: true }
+    );
+    const verifyResponseCode = verifyResponse.getResponseCode();
+    log('[25] 検証APIレスポンスコード', verifyResponseCode);
+
+    if (verifyResponseCode !== 200) {
+      const errorText = verifyResponse.getContentText();
+      log('[26] アクセストークン検証失敗', { response: errorText });
+      throw new Error('アクセストークンの検証に失敗しました: ' + errorText);
+    }
+
+    const verifyData = JSON.parse(verifyResponse.getContentText());
+    log('[27] 検証API結果', verifyData);
+    if (verifyData.client_id !== CONFIG.LINE_LOGIN_CHANNEL_ID) {
+      const mismatchInfo = { expected: CONFIG.LINE_LOGIN_CHANNEL_ID, actual: verifyData.client_id };
+      log('[28] チャネルID不一致', mismatchInfo);
+      throw new Error('チャネルIDが一致しません。');
+    }
+
+    // 2. プロフィール取得
+    log('[29] ユーザープロフィール取得API呼び出し開始');
+    const profileResponse = UrlFetchApp.fetch(CONFIG.LINE_PROFILE_API_URL, {
+      method: 'GET',
+      headers: { 'Authorization': 'Bearer ' + accessToken },
+      muteHttpExceptions: true
+    });
+    const profileResponseCode = profileResponse.getResponseCode();
+    log('[30] プロフィールAPIレスポンスコード', profileResponseCode);
+    if (profileResponseCode !== 200) {
+      const errorText = profileResponse.getContentText();
+      log('[31] プロフィール取得失敗', { response: errorText });
+      throw new Error('ユーザープロフィールの取得に失敗しました: ' + errorText);
+    }
+    const profileData = JSON.parse(profileResponse.getContentText());
+    log('[32] プロフィール取得成功', { userId: profileData.userId });
+    return profileData.userId;
+
+  } catch (error) {
+    log('[33] ユーザーID取得処理内エラー', error);
+    throw error;
+  }
+}
+
+/**
+ * data URLをDriveへ保存してURLを返す
+ */
+function saveDataUrlToDrive(dataUrl, filenamePrefix) {
+  const mime = getMimeFromDataUrl(dataUrl);
+  const base64 = dataUrl.split(',')[1] || dataUrl;
+  const ext = mime.split('/')[1] || 'jpg';
+  const name = `${filenamePrefix}_${new Date().getTime()}.${ext}`;
+  const blob = Utilities.newBlob(Utilities.base64Decode(base64), mime, name);
+
+  let file;
+  if (CONFIG.DRIVE_FOLDER_ID && CONFIG.DRIVE_FOLDER_ID !== 'DRIVE_FOLDER_ID') {
+    const folder = DriveApp.getFolderById(CONFIG.DRIVE_FOLDER_ID);
+    file = folder.createFile(blob);
+    log('[x1] 画像を指定フォルダに保存', { folderName: folder.getName(), name });
+  } else {
+    file = DriveApp.createFile(blob);
+    log('[x2] 画像をルートフォルダに保存', { name });
+  }
+  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  const url = file.getUrl();
+  log('[x3] 画像保存成功', { url });
+  return url;
+}
+
+/**
+ * スプレッドシートにデータ保存（2枚対応、既存レイアウト互換: 写真列にまとめて保存）
+ */
+function saveToSpreadsheet(data) {
+  try {
+    log('[34] スプレッドシート保存処理開始');
+
+    const spreadsheet = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+    const sheet = spreadsheet.getActiveSheet();
+
+    if (sheet.getLastRow() === 0) {
+      const headers = ['受付日時', '緯度', '経度', '地図', '通報種別', '詳細', '写真', 'LINEユーザーID'];
+      sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+      sheet.setFrozenRows(1);
+      log('[35] ヘッダー行を作成');
+    }
+
+    // 画像保存（近景/遠景/互換）
+    let photoNearUrl = '';
+    let photoFarUrl = '';
+
+    try {
+      if (data.photoNearData && data.photoNearMimeType) {
+        photoNearUrl = saveDataUrlToDrive(data.photoNearData, 'report_near');
+      }
+    } catch (errNear) {
+      log('[36N] 近景保存エラー', errNear);
+      photoNearUrl = '写真保存エラー: ' + errNear.toString();
+    }
+
+    try {
+      if (data.photoFarData && data.photoFarMimeType) {
+        photoFarUrl = saveDataUrlToDrive(data.photoFarData, 'report_far');
+      }
+    } catch (errFar) {
+      log('[36F] 遠景保存エラー', errFar);
+      photoFarUrl = '写真保存エラー: ' + errFar.toString();
+    }
+
+    // 旧フィールドしかない場合（後方互換）
+    if (!photoNearUrl && !photoFarUrl && data.photoData && data.photoMimeType) {
+      try {
+        const compatUrl = saveDataUrlToDrive(data.photoData, 'report_compat');
+        photoNearUrl = compatUrl; // 互換は近景枠扱い
+      } catch (compatErr) {
+        log('[36C] 互換写真保存エラー', compatErr);
+      }
+    }
+
+    const googleMapLink = `https://www.google.com/maps/search/?api=1&query=${data.latitude},${data.longitude}`;
+
+    // 写真列: 近景/遠景を改行でまとめる
+    let photoCellText = '';
+    if (photoNearUrl) photoCellText += `近景: ${photoNearUrl}`;
+    if (photoFarUrl) photoCellText += (photoCellText ? '\n' : '') + `遠景: ${photoFarUrl}`;
+
+    const rowData = [
+      new Date(),
+      data.latitude,
+      data.longitude,
+      googleMapLink,
+      data.type,
+      data.details || '',
+      photoCellText,
+      data.userId || ''
+    ];
+
+    const newRow = sheet.getLastRow() + 1;
+    sheet.getRange(newRow, 1, 1, rowData.length).setValues([rowData]);
+
+    log('[41] スプレッドシート保存完了', { row: newRow });
+
+    return {
+      id: newRow,
+      timestamp: new Date(),
+      googleMapLink,
+      photoNearUrl: photoNearUrl || '',
+      photoFarUrl: photoFarUrl || ''
+    };
+
+  } catch (error) {
+    log('[42] スプレッドシート保存処理内エラー', error);
+    throw new Error('スプレッドシートへの保存に失敗しました: ' + error.toString());
+  }
+}
+
+/**
+ * LINEにプッシュメッセージを送信（2枚対応のFlex）
+ */
+function sendLineMessage(userId, reportData, saveResult) {
+  try {
+    log('[43] LINE送信処理開始', { userId });
+
+    const messages = [];
+    messages.push(createFlexMessage(reportData, saveResult.photoNearUrl, saveResult.photoFarUrl));
+    log('[44] Flex Message作成完了');
+
+    const payload = { to: userId, messages };
+    log('[45] LINE API呼び出し準備完了', { messageCount: messages.length });
+
+    const options = {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + CONFIG.LINE_MESSAGING_ACCESS_TOKEN },
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    };
+
+    const response = UrlFetchApp.fetch(CONFIG.LINE_MESSAGING_API_URL, options);
+    const responseCode = response.getResponseCode();
+    log('[46] LINE APIレスポンス', { code: responseCode });
+
+    if (responseCode === 200) {
+      log('[47] LINE API成功');
+      return { success: true, messageCount: messages.length };
+    } else {
+      const errorText = response.getContentText();
+      log('[48] LINE APIエラー', { code: responseCode, error: errorText });
+      throw new Error(`LINE API エラー: ${responseCode} - ${errorText}`);
+    }
+
+  } catch (error) {
+    log('[49] LINE送信処理内エラー', error);
+    throw error;
+  }
+}
+
+/**
+ * Flex Messageを作成（近景→遠景の順に表示）
+ */
+function createFlexMessage(data, photoNearUrl, photoFarUrl) {
+  const heroImageUrl = photoNearUrl || photoFarUrl || '';
+  const heroBlock = (heroImageUrl && !heroImageUrl.includes('エラー')) ? {
+    type: 'image',
+    url: convertDriveUrlToImageUrl(heroImageUrl),
+    size: 'full',
+    aspectRatio: '20:13',
+    aspectMode: 'cover',
+    action: { type: 'uri', uri: heroImageUrl }
+  } : null;
+
+  const footerButtons = [
+    {
+      type: 'button',
+      style: 'link',
+      height: 'sm',
+      action: {
+        type: 'uri',
+        label: '地図で場所を確認する',
+        uri: `https://www.google.com/maps?q=${data.latitude},${data.longitude}`
+      }
+    }
+  ];
+
+  if (photoNearUrl && !photoNearUrl.includes('エラー')) {
+    footerButtons.push({
+      type: 'button',
+      style: 'link',
+      height: 'sm',
+      action: { type: 'uri', label: '近景写真を見る', uri: photoNearUrl }
+    });
+  }
+  if (photoFarUrl && !photoFarUrl.includes('エラー')) {
+    footerButtons.push({
+      type: 'button',
+      style: 'link',
+      height: 'sm',
+      action: { type: 'uri', label: '遠景写真を見る', uri: photoFarUrl }
+    });
+  }
+
+  return {
+    type: 'flex',
+    altText: '道路異状通報を受け付けました',
+    contents: {
+      type: 'bubble',
+      hero: heroBlock,
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'md',
+        contents: [
+          { type: 'text', text: '道路異状通報を受け付けました', weight: 'bold', size: 'xl', wrap: true },
+          {
+            type: 'box',
+            layout: 'vertical',
+            margin: 'lg',
+            spacing: 'sm',
+            contents: [
+              {
+                type: 'box', layout: 'baseline', spacing: 'sm', contents: [
+                  { type: 'text', text: '種別', color: '#aaaaaa', size: 'sm', flex: 1 },
+                  { type: 'text', text: data.type, wrap: true, color: '#666666', size: 'sm', flex: 4 }
+                ]
+              },
+              {
+                type: 'box', layout: 'baseline', spacing: 'sm', contents: [
+                  { type: 'text', text: '詳細', color: '#aaaaaa', size: 'sm', flex: 1 },
+                  { type: 'text', text: data.details || '記載なし', wrap: true, color: '#666666', size: 'sm', flex: 4 }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      footer: { type: 'box', layout: 'vertical', spacing: 'sm', contents: footerButtons }
+    }
+  };
+}
+
+/**
+ * Google DriveのURLを画像表示用URLに変換
+ */
+function convertDriveUrlToImageUrl(driveUrl) {
+  try {
+    const fileIdMatch = driveUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+    if (fileIdMatch) {
+      const fileId = fileIdMatch[1];
+      return `https://drive.google.com/uc?id=${fileId}`;
+    }
+    return driveUrl;
+  } catch (error) {
+    log('[50] URL変換エラー', error);
+    return driveUrl;
+  }
+}
+
+/**
+ * スプレッドシートにログ出力（オプション機能）
+ */
+function logToSpreadsheet(message, data) {
+  try {
+    const spreadsheet = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+    let logSheet = spreadsheet.getSheetByName('ログ');
+
+    if (!logSheet) {
+      logSheet = spreadsheet.insertSheet('ログ');
+      const headers = ['日時', 'メッセージ', 'データ'];
+      logSheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+      logSheet.setFrozenRows(1);
+    }
+
+    const rowData = [ new Date(), toSheetText(message), toSheetText(data) ];
+    logSheet.appendRow(rowData);
+
+  } catch (error) {
+    console.error('スプレッドシートへのログ記録中にエラーが発生しました:', error);
+  }
+}
+

@@ -355,7 +355,8 @@ textarea::placeholder {
 }
 
 /* ===== 画像プレビュー ===== */
-#image-preview {
+#image-preview,
+.image-preview {
   display: none;
   max-width: 100%;
   height: auto;
@@ -723,5 +724,4 @@ textarea:focus,
     background-color: #f0f0f0;
   }
 }
-
 
