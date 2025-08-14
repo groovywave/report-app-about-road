@@ -2,7 +2,7 @@
 
 // ▼▼▼【重要】設定値を更新してください ▼▼▼
 const CONFIG = {
-  GAS_WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbwugeGfQE6VL_LtlkBi1fryYG6ZHVFxAsfP1wabB-Cjg8zv4GhLqnkUcjVcWKCa1Kq5FA/exec',
+  GAS_WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbxLGELSQKABfH9lDBiAO0Aa9skpVzdvkNyf3jmCwzsUPh-WWb9GVLPTcL2-qEgNKKjlgA/exec',
   LIFF_ID: '2007739464-gVVMBAQR',
   MAX_RETRY_ATTEMPTS: 3,
   RETRY_DELAY: 1000,
@@ -495,7 +495,7 @@ async function handleFormSubmission(formData, elements) {
       latitude: formData.get('latitude'),
       longitude: formData.get('longitude'),
       type: formData.get('type'),
-      details: formData.get('details'),
+      details: formData.get('details') || '',
       photoNearData: currentPhotoNear.data,
       photoFarData: currentPhotoFar.data,
       accessToken: lineAccessToken,
@@ -503,17 +503,47 @@ async function handleFormSubmission(formData, elements) {
       timestamp: new Date().toISOString()
     };
 
-    await sendDataWithRetry(payload);
+    const result = await sendDataWithRetry(payload);
 
     showNotification('通報を受け付けました。ご協力ありがとうございます。', 'success');
-    elements.form.reset();
+
+    // 結果表示
+    const resultBox = document.getElementById('result');
+    const resultMsg = document.getElementById('result-message');
+    const resultLogs = document.getElementById('result-logs');
+    if (resultBox && resultMsg && resultLogs) {
+      const idText = (result?.id) ? `受付番号: #${result.id}` : '';
+      resultMsg.textContent = `送信に成功しました。${idText}`;
+      try {
+        const logsText = Array.isArray(result?.logs)
+          ? result.logs.map(l => `${l.timestamp} ${l.message}${l.data ? ' ' + JSON.stringify(l.data) : ''}`).join('\n')
+          : 'ログなし';
+        resultLogs.textContent = logsText;
+      } catch (_) {
+        resultLogs.textContent = 'ログの表示に失敗しました。';
+      }
+      resultBox.classList.remove('hidden');
+    }
+
+    // 入力の一部のみリセット（地図や種別は保持）
+    elements.detailsTextarea.value = '';
     updatePhotoForTarget('near', null, null, elements);
     updatePhotoForTarget('far', null, null, elements);
+    elements.photoInputNear.value = '';
+    elements.photoInputFar.value = '';
     validateForm(elements);
 
   } catch (error) {
     console.error('送信エラー:', error);
     showNotification(`送信に失敗しました: ${error.message}`, 'error');
+    const resultBox = document.getElementById('result');
+    const resultMsg = document.getElementById('result-message');
+    const resultLogs = document.getElementById('result-logs');
+    if (resultBox && resultMsg && resultLogs) {
+      resultMsg.textContent = '送信に失敗しました。再度お試しください。';
+      resultLogs.textContent = '';
+      resultBox.classList.remove('hidden');
+    }
   } finally {
     setSubmissionState(false, elements);
   }
@@ -554,5 +584,4 @@ async function sendDataWithRetry(payload, attempt = 1) {
     throw error;
   }
 }
-
 

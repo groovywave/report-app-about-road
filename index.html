@@ -103,7 +103,7 @@
             <label class="form-label">5. 異状のある場所 <span class="required-label">*</span></label>
             <div id="map-wrapper">
                 <div id="map"></div>
-                <i id="center-pin" class="fa-solid fa-location-dot" aria-hidden="true"></i>
+                <i id="center-pin" class="fas fa-map-marker-alt"></i>
             </div>
             <div id="coords-display">地図を動かして位置を合わせてください</div>
             <input type="hidden" id="latitude" name="latitude" required>
@@ -116,6 +116,15 @@
 
         <!-- 送信ボタン -->
         <button type="submit" id="btn-submit" disabled>必須項目を入力してください</button>
+
+        <!-- 送信結果表示 -->
+        <div id="result" class="result hidden" aria-live="polite">
+            <div id="result-message" class="result-message"></div>
+            <details id="result-logs-wrap">
+                <summary>デバッグログを表示</summary>
+                <pre id="result-logs"></pre>
+            </details>
+        </div>
     </form>
 </div>
 
@@ -146,3 +155,4 @@
 
 </body>
 </html>
+

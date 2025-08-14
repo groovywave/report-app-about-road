@@ -184,7 +184,6 @@ textarea.invalid {
     font-size: 36px;
     color: var(--error-color);
     pointer-events: none; /* ピンが地図の操作を妨げないように */
-    z-index: 500; /* Leafletレイヤの上に表示 */
 }
 
 #coords-display {
@@ -393,3 +392,28 @@ button[type="submit"]:disabled {
 .fa-spin {
   animation: fa-spin 1s infinite linear;
 }
+
+/* --- 結果表示 --- */
+.result {
+    margin-top: 16px;
+    padding: 12px;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+}
+.result-message {
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+#result-logs {
+    margin: 0;
+    max-height: 200px;
+    overflow: auto;
+    background: #fff;
+    border: 1px solid #eee;
+    padding: 8px;
+    border-radius: 4px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
