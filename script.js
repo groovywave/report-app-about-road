@@ -269,13 +269,20 @@ function validateForm(elements) {
 
   // バリデーションロジック
   let isValid = true;
+  // LINE連携が完了しているかチェック（accessToken と userId の両方）
+  const isLineLinked = !!(lineAccessToken && lineUserId);
   if (!typeChecked) isValid = false;
   if (isOtherSelected && detailsValue === '') isValid = false;
   if (!elements.latInput.value || !elements.lngInput.value) isValid = false;
+  if (!isLineLinked) isValid = false;
 
   // 送信ボタンの有効/無効を切り替え
   elements.submitButton.disabled = !isValid;
-  elements.submitButton.textContent = isValid ? 'この内容で通報する' : '必須項目を入力してください';
+  if (!isLineLinked) {
+    elements.submitButton.textContent = 'LINE連携後に送信可能';
+  } else {
+    elements.submitButton.textContent = isValid ? 'この内容で通報する' : '必須項目を入力してください';
+  }
 }
 
 /**
@@ -590,4 +597,3 @@ async function sendDataWithRetry(payload, attempt = 1) {
     throw error;
   }
 }
-

@@ -19,6 +19,9 @@ const CONFIG = {
   LINE_VERIFY_TOKEN_URL: 'https://api.line.me/oauth2/v2.1/verify',
   // Google Drive設定
   DRIVE_FOLDER_ID: '1gIWfzC6mSI3fjwbiDR--vucBnogsrGWv', // ← 実際のDriveフォルダIDに変更
+  // メール通知設定
+  SEND_EMAIL_ON_SUCCESS: true, // 通報受付時にメール通知を送る
+  EMAIL_LIST_SHEET_NAME: 'メール', // 通知先メールアドレスを記載したシート名
   // ログ出力設定
   LOG_TO_RESPONSE: true, // レスポンスにログを含める
   LOG_TO_SPREADSHEET: true // スプレッドシートにログ出力（オプション）
@@ -263,6 +266,18 @@ function doPost(e) {
       log('[20] === LINE投稿条件を満たしていません。スキップします ===');
     }
 
+    // 4. 管理者へのメール通知
+    if (CONFIG.SEND_EMAIL_ON_SUCCESS) {
+      try {
+        sendAdminNotificationEmail(validatedData, saveResult);
+        log('[20E] 管理者メール通知 送信完了');
+      } catch (emailErr) {
+        log('[20E] 管理者メール通知 エラー', emailErr);
+      }
+    } else {
+      log('[20E] 管理者メール通知: 設定で無効のためスキップ');
+    }
+
     // 成功レスポンス
     const response = {
       status: 'success',
@@ -378,7 +393,8 @@ function saveToSpreadsheet(data) {
     log('[34] スプレッドシート保存処理開始');
 
     const spreadsheet = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
-    const sheet = spreadsheet.getActiveSheet();
+    // 既定シート名が存在する場合はそれを取得、無ければアクティブシート
+    const sheet = spreadsheet.getSheetByName('通報データ') || spreadsheet.getActiveSheet();
 
     if (sheet.getLastRow() === 0) {
       const headers = ['受付日時', '緯度', '経度', '地図', '通報種別', '詳細', '写真', 'LINEユーザーID'];
@@ -580,6 +596,83 @@ function createFlexMessage(data, photoNearUrl, photoFarUrl) {
 }
 
 /**
+ * メール通知: 管理者の宛先取得
+ * - シート名は CONFIG.EMAIL_LIST_SHEET_NAME（例: 'メール'）
+ * - A/B列のどちらにあっても抽出
+ * - 2行目以降を対象（1行目はヘッダー想定）
+ */
+function getAdminEmails() {
+  try {
+    const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+    const sheet = ss.getSheetByName(CONFIG.EMAIL_LIST_SHEET_NAME);
+    if (!sheet) {
+      log('[EML] 通知先シートが見つかりません', { name: CONFIG.EMAIL_LIST_SHEET_NAME });
+      return [];
+    }
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return [];
+    const range = sheet.getRange(2, 1, lastRow - 1, Math.min(5, sheet.getLastColumn()));
+    const values = range.getValues();
+    const emailRegex = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i;
+    const emails = [];
+    values.forEach(row => {
+      row.forEach(cell => {
+        if (typeof cell === 'string') {
+          const m = cell.match(emailRegex);
+          if (m) emails.push(m[0]);
+        }
+      });
+    });
+    const unique = Array.from(new Set(emails));
+    log('[EML] 通知先メール抽出', { count: unique.length, emails: unique });
+    return unique;
+  } catch (err) {
+    log('[EML] 通知先メール抽出エラー', err);
+    return [];
+  }
+}
+
+/**
+ * メール通知: 通報受付のお知らせ
+ */
+function sendAdminNotificationEmail(data, saveResult) {
+  const recipients = getAdminEmails();
+  if (!recipients.length) {
+    log('[EML] 宛先0件のため送信スキップ');
+    return;
+  }
+  const subject = `【道路通報】新規通報（種別: ${data.type}）`;
+  const lines = [];
+  lines.push('道路通報システムに新しい通報が登録されました。');
+  lines.push('');
+  lines.push('====== 通報内容 ======');
+  lines.push(`受付番号: ${saveResult.id}`);
+  lines.push(`受付日時: ${new Date().toLocaleString('ja-JP')}`);
+  lines.push(`通報種別: ${data.type}`);
+  lines.push(`詳細: ${data.details || '記載なし'}`);
+  lines.push('');
+  lines.push('====== 場所 ======');
+  lines.push(`緯度: ${data.latitude}`);
+  lines.push(`経度: ${data.longitude}`);
+  lines.push(`地図で確認: ${saveResult.googleMapLink}`);
+  lines.push('');
+  lines.push('====== 写真 ======');
+  lines.push(`近景写真: ${saveResult.photoNearUrl || 'なし'}`);
+  lines.push(`遠景写真: ${saveResult.photoFarUrl || 'なし'}`);
+  lines.push('');
+  lines.push('====== スプレッドシート ======');
+  lines.push(`https://docs.google.com/spreadsheets/d/${CONFIG.SPREADSHEET_ID}/`);
+  const body = lines.join('\n');
+
+  try {
+    MailApp.sendEmail({ to: recipients.join(','), subject, body, name: '道路通報システム', noReply: true });
+    log('[EML] メール送信成功', { recipients });
+  } catch (err) {
+    log('[EML] メール送信エラー', err);
+  }
+}
+
+/**
  * Google DriveのURLを画像表示用URLに変換
  */
 function convertDriveUrlToImageUrl(driveUrl) {
@@ -618,4 +711,3 @@ function logToSpreadsheet(message, data) {
     console.error('スプレッドシートへのログ記録中にエラーが発生しました:', error);
   }
 }
-

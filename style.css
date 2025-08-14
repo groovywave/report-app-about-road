@@ -184,6 +184,7 @@ textarea.invalid {
     font-size: 36px;
     color: var(--error-color);
     pointer-events: none; /* ピンが地図の操作を妨げないように */
+    z-index: 500; /* Leafletレイヤの上に表示 */
 }
 
 #coords-display {
@@ -392,4 +393,3 @@ button[type="submit"]:disabled {
 .fa-spin {
   animation: fa-spin 1s infinite linear;
 }
-
