@@ -6,7 +6,7 @@ const CONFIG = {
   LIFF_ID: '2007739464-gVVMBAQR',
   MAX_RETRY_ATTEMPTS: 3,
   RETRY_DELAY: 1000,
-  REQUEST_TIMEOUT: 30000,
+  REQUEST_TIMEOUT: 60000,
   MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
 };
