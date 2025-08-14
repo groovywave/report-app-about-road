@@ -24,7 +24,7 @@ let lineAccessToken = null;
 let lineUserId = null;
 
 // --- メイン処理 ---
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
   // --- 要素の取得 ---
   const elements = {
     form: document.getElementById('report-form'),
