@@ -2,7 +2,7 @@
 
 // ▼▼▼【重要】設定値を更新してください ▼▼▼
 const CONFIG = {
-  GAS_WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbziSlEqy0MNSUEX-KWDqXtbh-iNX51PjagJFYyAb9KKM3LTXRqKMYVt8p3sMSVtICXVaA/exec',
+  GAS_WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbwugeGfQE6VL_LtlkBi1fryYG6ZHVFxAsfP1wabB-Cjg8zv4GhLqnkUcjVcWKCa1Kq5FA/exec',
   LIFF_ID: '2007739464-gVVMBAQR',
   MAX_RETRY_ATTEMPTS: 3,
   RETRY_DELAY: 1000,
@@ -79,66 +79,30 @@ document.addEventListener('DOMContentLoaded', function () {
  * LIFFの初期化とLINEユーザー情報の取得
  */
 async function initializeLIFF() {
-  // 先に送信ボタンを取得しておく
-  const submitButton = document.getElementById('btn-submit');
-
   try {
-    // LIFF IDのチェック
     if (!CONFIG.LIFF_ID || CONFIG.LIFF_ID.includes('LIFF ID')) {
       updateLineStatus('warning', 'LIFF IDが設定されていません');
-      submitButton.textContent = 'LIFF設定エラー'; // ボタンの状態も更新
       return;
     }
-
-    // 1. LIFFの初期化
-    updateLineStatus('prompt', 'LINE連携を確認中...');
     await liff.init({ liffId: CONFIG.LIFF_ID });
 
-    // 2. ログイン状態のチェック
-    if (!liff.isLoggedIn()) {
-      // 3. ★★★ ログインしていない場合、自動でログインページにリダイレクト ★★★
-      updateLineStatus('prompt', 'LINEログインページに移動します...');
-      // 現在のページURLをリダイレクト先として指定し、ログイン後に戻ってくるようにする
-      liff.login({ redirectUri: window.location.href });
+    if (liff.isLoggedIn()) {
+      lineAccessToken = liff.getAccessToken();
+      const profile = await liff.getProfile();
+      lineUserId = profile.userId;
 
-      // liff.login()はページを遷移させるため、これ以降の処理は不要
-      return;
+      document.getElementById('accessToken').value = lineAccessToken;
+      document.getElementById('userId').value = lineUserId;
+
+      updateLineStatus('success', `LINE連携済み: ${profile.displayName}`);
+      setTimeout(() => document.getElementById('line-status').classList.add('hidden'), 5000);
+    } else {
+      updateLineStatus('prompt', 'LINEログインが必要です');
+      // 必要に応じて liff.login() を呼び出すことも可能
     }
-
-    // 4. ログイン済みの場合の処理
-    updateLineStatus('success', 'LINE連携を確認中...');
-
-    // ユーザー情報とアクセストークンを取得
-    const profile = await liff.getProfile();
-    lineAccessToken = liff.getAccessToken();
-    lineUserId = profile.userId;
-
-    // 隠しフィールドに値を設定
-    document.getElementById('accessToken').value = lineAccessToken;
-    document.getElementById('userId').value = lineUserId;
-
-    // UIを更新
-    updateLineStatus('success', `LINE連携済み: ${profile.displayName}`);
-    // 5秒後にステータス表示を隠す
-    setTimeout(() => document.getElementById('line-status').classList.add('hidden'), 5000);
-
-    // ★★★ ログインが確認できたので、フォームのバリデーションを再実行してボタンの状態を更新 ★★★
-    // DOM要素をここで取得して渡す
-    const elements = {
-      form: document.getElementById('report-form'),
-      submitButton: submitButton,
-      typeRadios: document.querySelectorAll('input[name="type"]'),
-      detailsTextarea: document.getElementById('details'),
-      detailsRequiredNote: document.getElementById('details-required-note'),
-      latInput: document.getElementById('latitude'),
-      lngInput: document.getElementById('longitude'),
-    };
-    validateForm(elements);
-
   } catch (error) {
     console.error('LIFF初期化エラー:', error);
     updateLineStatus('error', 'LINE連携に失敗しました');
-    submitButton.textContent = 'LINE連携エラー'; // ボタンの状態も更新
   }
 }
 
@@ -269,20 +233,13 @@ function validateForm(elements) {
 
   // バリデーションロジック
   let isValid = true;
-  // LINE連携が完了しているかチェック（accessToken と userId の両方）
-  const isLineLinked = !!(lineAccessToken && lineUserId);
   if (!typeChecked) isValid = false;
   if (isOtherSelected && detailsValue === '') isValid = false;
   if (!elements.latInput.value || !elements.lngInput.value) isValid = false;
-  if (!isLineLinked) isValid = false;
 
   // 送信ボタンの有効/無効を切り替え
   elements.submitButton.disabled = !isValid;
-  if (!isLineLinked) {
-    elements.submitButton.textContent = 'LINE連携後に送信可能';
-  } else {
-    elements.submitButton.textContent = isValid ? 'この内容で通報する' : '必須項目を入力してください';
-  }
+  elements.submitButton.textContent = isValid ? 'この内容で通報する' : '必須項目を入力してください';
 }
 
 /**
@@ -597,3 +554,5 @@ async function sendDataWithRetry(payload, attempt = 1) {
     throw error;
   }
 }
+
+
