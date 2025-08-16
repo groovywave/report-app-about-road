@@ -15,7 +15,8 @@ let currentPhoto = { data: null, mimeType: null };
 let videoStream = null;
 let lineAccessToken = null;
 let lineUserId = null;
-let CONFIG;
+let CONFIG = {};
+let elements = {};
 
 document.addEventListener('DOMContentLoaded', async function() {
   try {
@@ -31,7 +32,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     console.log('アプリケーション設定が完了しました:', CONFIG);
     // 要素の取得
-    const elements = {
+    elements = {
       map: L.map('map').setView([36.871, 140.016], 16),
       coordsDisplay: document.getElementById('coords-display'),
       latInput: document.getElementById('latitude'),
@@ -62,22 +63,23 @@ document.addEventListener('DOMContentLoaded', async function() {
       captureButton: document.getElementById('capture-btn'),
       cancelButton: document.getElementById('cancel-camera-btn')
     };
+
+    // === LIFF初期化 ===
+    initializeLIFF();
+
+    // === 地図の初期化 ===
+    initializeMap(elements);
+
+    // === カメラ機能の初期化 ===
+    initializeCameraFeatures(elements);
+
+    // === フォーム機能の初期化 ===
+    initializeFormFeatures(elements);
+
   } catch (error) {
     console.error('初期化エラー:', error);
     showNotification(error.message, 'error');
   }
-
-  // === LIFF初期化 ===
-  initializeLIFF();
-
-  // === 地図の初期化 ===
-  initializeMap(elements);
-
-  // === カメラ機能の初期化 ===
-  initializeCameraFeatures(elements);
-
-  // === フォーム機能の初期化 ===
-  initializeFormFeatures(elements);
 
   // === LIFF初期化関数（修正版） ===
   async function initializeLIFF() {
