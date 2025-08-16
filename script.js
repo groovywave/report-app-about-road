@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
     const envConfig = await response.json();
 
-    // 2. 固定的な設定値とマージして、最終的なCONFIGオブジェクトを完成させる
+    // 2. 固定的な設定値とマージして、最終的なCONFIGオブジェクトを完成させる!
     CONFIG = { ...APP_SETTINGS, ...envConfig };
 
     console.log('アプリケーション設定が完了しました:', CONFIG);
