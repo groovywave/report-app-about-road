@@ -1,9 +1,7 @@
 // script.js - LINE Login channel対応版
 
 // ▼▼▼【重要】設定値を更新してください ▼▼▼
-const CONFIG = {
-  GAS_WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbz3CaafwwFZbMG0SatkKJGLM-Q_CqoOWCc0obEg2Jnxgjz4-2i1lWFPmDWQ5a89WlBbsw/exec',
-  LIFF_ID: '2007739464-gVVMBAQR', // LINE Login channelのLIFF IDに変更
+const APP_SETTINGS = {
   MAX_RETRY_ATTEMPTS: 3,
   RETRY_DELAY: 1000,
   REQUEST_TIMEOUT: 30000,
@@ -17,40 +15,57 @@ let currentPhoto = { data: null, mimeType: null };
 let videoStream = null;
 let lineAccessToken = null;
 let lineUserId = null;
+let CONFIG;
 
-document.addEventListener('DOMContentLoaded', function() {
-  // 要素の取得
-  const elements = {
-    map: L.map('map').setView([36.871, 140.016], 16),
-    coordsDisplay: document.getElementById('coords-display'),
-    latInput: document.getElementById('latitude'),
-    lngInput: document.getElementById('longitude'),
-    form: document.getElementById('report-form'),
-    loader: document.getElementById('loader'),
-    photoInput: document.getElementById('photo'),
-    imagePreview: document.getElementById('image-preview'),
-    lineStatus: document.getElementById('line-status'),
-    lineStatusText: document.getElementById('line-status-text'),
-    accessTokenInput: document.getElementById('accessToken'),
-    userIdInput: document.getElementById('userId'),
-    detailsTextarea: document.getElementById('details'), // 詳細テキストエリア
-    detailsRequiredNote: document.getElementById('details-required-note'), // 注釈用span
-    typeRadios: document.querySelectorAll('input[name="type"]'), // 異常の種類ラジオボタン（すべて）
+document.addEventListener('DOMContentLoaded', async function() {
+  try {
+    // 1. Cloudflareから環境依存の設定値を取得
+    const response = await fetch('/api/config');
+    if (!response.ok) {
+      throw new Error('設定ファイルの読み込みに失敗しました。');
+    }
+    const envConfig = await response.json();
 
-    // カメラ関連
-    requestPermissionButton: document.getElementById('request-camera-permission'),
-    permissionStatus: document.getElementById('permission-status'),
-    startCameraButton: document.getElementById('start-camera-btn'),
-    cameraModal: document.getElementById('camera-modal'),
-    videoWrapper: document.getElementById('video-wrapper'),
-    videoElement: document.getElementById('camera-stream'),
-    cameraErrorView: document.getElementById('camera-error-view'),
-    cameraErrorText: document.getElementById('camera-error-text'),
-    retryCameraButton: document.getElementById('retry-camera-btn'),
-    canvasElement: document.getElementById('camera-canvas'),
-    captureButton: document.getElementById('capture-btn'),
-    cancelButton: document.getElementById('cancel-camera-btn')
-  };
+    // 2. 固定的な設定値とマージして、最終的なCONFIGオブジェクトを完成させる
+    CONFIG = { ...APP_SETTINGS, ...envConfig };
+
+    console.log('アプリケーション設定が完了しました:', CONFIG);
+    // 要素の取得
+    const elements = {
+      map: L.map('map').setView([36.871, 140.016], 16),
+      coordsDisplay: document.getElementById('coords-display'),
+      latInput: document.getElementById('latitude'),
+      lngInput: document.getElementById('longitude'),
+      form: document.getElementById('report-form'),
+      loader: document.getElementById('loader'),
+      photoInput: document.getElementById('photo'),
+      imagePreview: document.getElementById('image-preview'),
+      lineStatus: document.getElementById('line-status'),
+      lineStatusText: document.getElementById('line-status-text'),
+      accessTokenInput: document.getElementById('accessToken'),
+      userIdInput: document.getElementById('userId'),
+      detailsTextarea: document.getElementById('details'), // 詳細テキストエリア
+      detailsRequiredNote: document.getElementById('details-required-note'), // 注釈用span
+      typeRadios: document.querySelectorAll('input[name="type"]'), // 異常の種類ラジオボタン（すべて）
+
+      // カメラ関連
+      requestPermissionButton: document.getElementById('request-camera-permission'),
+      permissionStatus: document.getElementById('permission-status'),
+      startCameraButton: document.getElementById('start-camera-btn'),
+      cameraModal: document.getElementById('camera-modal'),
+      videoWrapper: document.getElementById('video-wrapper'),
+      videoElement: document.getElementById('camera-stream'),
+      cameraErrorView: document.getElementById('camera-error-view'),
+      cameraErrorText: document.getElementById('camera-error-text'),
+      retryCameraButton: document.getElementById('retry-camera-btn'),
+      canvasElement: document.getElementById('camera-canvas'),
+      captureButton: document.getElementById('capture-btn'),
+      cancelButton: document.getElementById('cancel-camera-btn')
+    };
+  } catch (error) {
+    console.error('初期化エラー:', error);
+    showNotification(error.message, 'error');
+  }
 
   // === LIFF初期化 ===
   initializeLIFF();
