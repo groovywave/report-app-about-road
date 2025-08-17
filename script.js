@@ -642,9 +642,9 @@ document.addEventListener('DOMContentLoaded', async function () {
         type: formData.get('type'),
         details: formData.get('details'),
         photoData1: currentPhoto1.data,
-        photoMimeType1: currentPhoto1.mimeType,
+        // photoMimeType1: currentPhoto1.mimeType,
         photoData2: currentPhoto2.data,
-        photoMimeType2: currentPhoto2.mimeType,
+        // photoMimeType2: currentPhoto2.mimeType,
         accessToken: lineAccessToken, // アクセストークンを送信
         userId: lineUserId, // ユーザーIDも送信（参考用）
         timestamp: new Date().toISOString()
@@ -656,9 +656,10 @@ document.addEventListener('DOMContentLoaded', async function () {
       const response = await fetch(CONFIG.GAS_WEB_APP_URL, {
         method: 'POST',
         body: JSON.stringify(payload),
-        headers: { 'Content-Type': 'text/plain' },
-        mode: 'cors',
-        signal: controller.signal
+        // headers: { 'Content-Type': 'text/plain' },
+        // mode: 'cors',
+        signal: controller.signal,
+        redirect: 'follow'
       });
 
       clearTimeout(timeoutId);
@@ -667,7 +668,8 @@ document.addEventListener('DOMContentLoaded', async function () {
         throw new Error(`サーバーエラー: ${response.status} ${response.statusText}`);
       }
 
-      const data = JSON.parse(await response.text());
+      // const data = JSON.parse(await response.text());
+      const data = await response.json();
       if (data.status === 'success') {
         return data;
       } else {
