@@ -20,7 +20,7 @@ let lineUserId = null;
 let CONFIG = {};
 let elements = {};
 
-document.addEventListener('DOMContentLoaded', async function() {
+document.addEventListener('DOMContentLoaded', async function () {
   try {
     // 1. Cloudflareから環境依存の設定値を取得
     const response = await fetch('/api/config');
@@ -174,10 +174,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     // 現在位置の取得
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        function(pos) {
+        function (pos) {
           elements.map.setView([pos.coords.latitude, pos.coords.longitude], 18);
         },
-        function(error) {
+        function (error) {
           console.warn('位置情報の取得に失敗しました:', error);
           showNotification('位置情報の取得に失敗しました。手動で位置を調整してください。', 'warning');
         }
@@ -257,15 +257,15 @@ document.addEventListener('DOMContentLoaded', async function() {
     handleTypeChange();
 
     // 写真プレビュー
-    elements.photoInput1.addEventListener('change', function() {
+    elements.photoInput1.addEventListener('change', function () {
       handlePhotoInput(this, 1);
     });
-    elements.photoInput2.addEventListener('change', function() {
+    elements.photoInput2.addEventListener('change', function () {
       handlePhotoInput(this, 2);
     });
 
     // フォーム送信
-    elements.form.addEventListener('submit', function(e) {
+    elements.form.addEventListener('submit', function (e) {
       e.preventDefault();
       if (!elements.loader.classList.contains('sending')) {
         const formData = new FormData(this);
