@@ -1,8 +1,9 @@
 // script.js - LINE Login channel対応版
 
-
 // ▼▼▼【重要】設定値を更新してください ▼▼▼
-const APP_SETTINGS = {
+const CONFIG = {
+  GAS_WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbxiWi4SxST09ALr-rIpC9XsnSURsjEEPJ7XcoajJFUh7HGKrYIpCx62QiUSRTHWPrzsiA/exec',
+  LIFF_ID: '2007739464-gVVMBAQR', // LINE Login channelのLIFF IDに変更
   MAX_RETRY_ATTEMPTS: 3,
   RETRY_DELAY: 1000,
   REQUEST_TIMEOUT: 30000,
@@ -12,83 +13,56 @@ const APP_SETTINGS = {
 // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
 // グローバル変数
-let currentPhoto1 = { data: null, mimeType: null };
-let currentPhoto2 = { data: null, mimeType: null };
-let activeCameraTarget = null;
+let currentPhoto = { data: null, mimeType: null };
 let videoStream = null;
 let lineAccessToken = null;
 let lineUserId = null;
-let CONFIG = {};
-let elements = {};
 
-document.addEventListener('DOMContentLoaded', async function () {
-  try {
-    // 1. Cloudflareから環境依存の設定値を取得
-    const response = await fetch('/api/config');
-    if (!response.ok) {
-      throw new Error('設定ファイルの読み込みに失敗しました。');
-    }
-    const envConfig = await response.json();
+document.addEventListener('DOMContentLoaded', function () {
+  // 要素の取得
+  const elements = {
+    map: L.map('map').setView([36.871, 140.016], 16),
+    coordsDisplay: document.getElementById('coords-display'),
+    latInput: document.getElementById('latitude'),
+    lngInput: document.getElementById('longitude'),
+    form: document.getElementById('report-form'),
+    loader: document.getElementById('loader'),
+    photoInput: document.getElementById('photo'),
+    imagePreview: document.getElementById('image-preview'),
+    lineStatus: document.getElementById('line-status'),
+    lineStatusText: document.getElementById('line-status-text'),
+    accessTokenInput: document.getElementById('accessToken'),
+    userIdInput: document.getElementById('userId'),
+    detailsTextarea: document.getElementById('details'), // 詳細テキストエリア
+    detailsRequiredNote: document.getElementById('details-required-note'), // 注釈用span
+    typeRadios: document.querySelectorAll('input[name="type"]'), // 異常の種類ラジオボタン（すべて）
 
-    // 2. 固定的な設定値とマージして、最終的なCONFIGオブジェクトを完成させる!
-    CONFIG = { ...APP_SETTINGS, ...envConfig };
+    // カメラ関連
+    requestPermissionButton: document.getElementById('request-camera-permission'),
+    permissionStatus: document.getElementById('permission-status'),
+    startCameraButton: document.getElementById('start-camera-btn'),
+    cameraModal: document.getElementById('camera-modal'),
+    videoWrapper: document.getElementById('video-wrapper'),
+    videoElement: document.getElementById('camera-stream'),
+    cameraErrorView: document.getElementById('camera-error-view'),
+    cameraErrorText: document.getElementById('camera-error-text'),
+    retryCameraButton: document.getElementById('retry-camera-btn'),
+    canvasElement: document.getElementById('camera-canvas'),
+    captureButton: document.getElementById('capture-btn'),
+    cancelButton: document.getElementById('cancel-camera-btn')
+  };
 
-    console.log('アプリケーション設定が完了しました:', CONFIG);
-    // 要素の取得
-    elements = {
-      map: L.map('map').setView([36.871, 140.016], 16),
-      coordsDisplay: document.getElementById('coords-display'),
-      latInput: document.getElementById('latitude'),
-      lngInput: document.getElementById('longitude'),
-      form: document.getElementById('report-form'),
-      loader: document.getElementById('loader'),
-      // photoInput: document.getElementById('photo'),
-      // imagePreview: document.getElementById('image-preview'),
-      lineStatus: document.getElementById('line-status'),
-      lineStatusText: document.getElementById('line-status-text'),
-      accessTokenInput: document.getElementById('accessToken'),
-      userIdInput: document.getElementById('userId'),
-      detailsTextarea: document.getElementById('details'), // 詳細テキストエリア
-      detailsRequiredNote: document.getElementById('details-required-note'), // 注釈用span
-      typeRadios: document.querySelectorAll('input[name="type"]'), // 異常の種類ラジオボタン（すべて）
+  // === LIFF初期化 ===
+  initializeLIFF();
 
-      // カメラ関連
-      requestPermissionButton: document.getElementById('request-camera-permission'),
-      permissionStatus: document.getElementById('permission-status'),
-      // startCameraButton: document.getElementById('start-camera-btn'),
-      photoInput1: document.getElementById('photo1'),
-      imagePreview1: document.getElementById('image-preview1'),
-      startCameraButton1: document.getElementById('start-camera-btn1'),
-      photoInput2: document.getElementById('photo2'),
-      imagePreview2: document.getElementById('image-preview2'),
-      startCameraButton2: document.getElementById('start-camera-btn2'),
-      cameraModal: document.getElementById('camera-modal'),
-      videoWrapper: document.getElementById('video-wrapper'),
-      videoElement: document.getElementById('camera-stream'),
-      cameraErrorView: document.getElementById('camera-error-view'),
-      cameraErrorText: document.getElementById('camera-error-text'),
-      retryCameraButton: document.getElementById('retry-camera-btn'),
-      canvasElement: document.getElementById('camera-canvas'),
-      captureButton: document.getElementById('capture-btn'),
-      cancelButton: document.getElementById('cancel-camera-btn')
-    };
+  // === 地図の初期化 ===
+  initializeMap(elements);
 
-    // === LIFF初期化 ===
-    initializeLIFF();
+  // === カメラ機能の初期化 ===
+  initializeCameraFeatures(elements);
 
-    // === 地図の初期化 ===
-    initializeMap(elements);
-
-    // === カメラ機能の初期化 ===
-    initializeCameraFeatures(elements);
-
-    // === フォーム機能の初期化 ===
-    initializeFormFeatures(elements);
-
-  } catch (error) {
-    console.error('初期化エラー:', error);
-    showNotification(error.message, 'error');
-  }
+  // === フォーム機能の初期化 ===
+  initializeFormFeatures(elements);
 
   // === LIFF初期化関数（修正版） ===
   async function initializeLIFF() {
@@ -194,20 +168,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
 
     // 権限確認
-    // setTimeout(() => checkCameraPermission(elements), 100);
-
-    elements.startCameraButton1.addEventListener('click', (e) => {
-      e.preventDefault();
-      activeCameraTarget = 1;
-      startCamera();
-    });
-
-
-    elements.startCameraButton2.addEventListener('click', (e) => {
-      e.preventDefault();
-      activeCameraTarget = 2;
-      startCamera();
-    });
+    setTimeout(() => checkCameraPermission(elements), 100);
 
     // イベントリスナー設定
     if (elements.requestPermissionButton) {
@@ -258,11 +219,8 @@ document.addEventListener('DOMContentLoaded', async function () {
     handleTypeChange();
 
     // 写真プレビュー
-    elements.photoInput1.addEventListener('change', function () {
-      handlePhotoInput(this, 1);
-    });
-    elements.photoInput2.addEventListener('change', function () {
-      handlePhotoInput(this, 2);
+    elements.photoInput.addEventListener('change', function () {
+      handlePhotoInput(this, elements);
     });
 
     // フォーム送信
@@ -325,21 +283,18 @@ document.addEventListener('DOMContentLoaded', async function () {
   }
 
   // 写真データ更新（統合版）
-  function updatePhoto(data, mimeType, photoNumber) {
-    const targetPreview = (photoNumber === 1) ? elements.imagePreview1 : elements.imagePreview2;
-    const targetPhotoData = (photoNumber === 1) ? currentPhoto1 : currentPhoto2;
-    const targetInput = (photoNumber === 1) ? elements.photoInput1 : elements.photoInput2;
-    targetPhotoData.data = data;
-    targetPhotoData.mimeType = mimeType;
+  function updatePhoto(data, mimeType, elements) {
+    currentPhoto.data = data;
+    currentPhoto.mimeType = mimeType;
 
     if (data && mimeType) {
-      targetPreview.src = data;
-      targetPreview.style.display = 'block';
+      elements.imagePreview.src = data;
+      elements.imagePreview.style.display = 'block';
     } else {
-      targetPreview.src = '#';
-      targetPreview.style.display = 'none';
+      elements.imagePreview.src = '#';
+      elements.imagePreview.style.display = 'none';
     }
-    targetInput.value = '';
+    elements.photoInput.value = '';
   }
 
   // === カメラ関連関数（統合・簡略化版） ===
@@ -470,14 +425,13 @@ document.addEventListener('DOMContentLoaded', async function () {
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-    updatePhoto(dataUrl, 'image/jpeg', activeCameraTarget);
+    updatePhoto(dataUrl, 'image/jpeg', elements);
     stopCamera(elements);
     showNotification('写真を撮影しました。', 'success');
-    activeCameraTarget = null;
   }
 
   // === 写真入力処理（画像圧縮機能付き） ===
-  function handlePhotoInput(input, photoNumber) {
+  function handlePhotoInput(input, elements) {
     if (input.files && input.files[0]) {
       const file = input.files[0];
 
@@ -539,7 +493,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 
           // ★ 圧縮後のデータでUIを更新する
           // MIMEタイプは 'image/jpeg' になる
-          updatePhoto(compressedBase64, 'image/jpeg', photoNumber);
+          updatePhoto(compressedBase64, 'image/jpeg', elements);
 
           // (デバッグ用) 圧縮率を確認
           console.log(`画像圧縮完了 - 元サイズ: ${Math.round(originalBase64.length / 1024)} KB, 圧縮後サイズ: ${Math.round(compressedBase64.length / 1024)} KB`);
@@ -581,8 +535,7 @@ document.addEventListener('DOMContentLoaded', async function () {
       // 成功処理
       showNotification('通報を受け付けました。ご協力ありがとうございます。', 'success');
       elements.form.reset();
-      updatePhoto(null, null, 1);
-      updatePhoto(null, null, 2);
+      updatePhoto(null, null, elements);
 
     } catch (error) {
       console.error('送信エラー:', error);
@@ -642,10 +595,8 @@ document.addEventListener('DOMContentLoaded', async function () {
         longitude: formData.get('longitude'),
         type: formData.get('type'),
         details: formData.get('details'),
-        photoData1: currentPhoto1.data,
-        // photoMimeType1: currentPhoto1.mimeType,
-        photoData2: currentPhoto2.data,
-        // photoMimeType2: currentPhoto2.mimeType,
+        photoData: currentPhoto.data,
+        photoMimeType: currentPhoto.mimeType,
         accessToken: lineAccessToken, // アクセストークンを送信
         userId: lineUserId, // ユーザーIDも送信（参考用）
         timestamp: new Date().toISOString()
@@ -657,10 +608,9 @@ document.addEventListener('DOMContentLoaded', async function () {
       const response = await fetch(CONFIG.GAS_WEB_APP_URL, {
         method: 'POST',
         body: JSON.stringify(payload),
-        // headers: { 'Content-Type': 'text/plain' },
-        // mode: 'cors',
-        signal: controller.signal,
-        redirect: 'follow'
+        headers: { 'Content-Type': 'text/plain' },
+        mode: 'cors',
+        signal: controller.signal
       });
 
       clearTimeout(timeoutId);
@@ -669,8 +619,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         throw new Error(`サーバーエラー: ${response.status} ${response.statusText}`);
       }
 
-      // const data = JSON.parse(await response.text());
-      const data = await response.json();
+      const data = JSON.parse(await response.text());
       if (data.status === 'success') {
         return data;
       } else {
