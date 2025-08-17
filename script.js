@@ -607,6 +607,13 @@ document.addEventListener('DOMContentLoaded', async function () {
 
   async function sendDataWithRetry(formData, attempt = 1) {
     try {
+      if (!liff) {
+        throw new Error('LIFFが初期化されていません。');
+      }
+      const currentAccessToken = liff.getAccessToken();
+      if (!currentAccessToken) {
+        throw new Error('LINEの認証情報が取得できませんでした。')
+      }
       const payload = {
         latitude: formData.get('latitude'),
         longitude: formData.get('longitude'),
@@ -614,7 +621,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         details: formData.get('details'),
         photoData: currentPhoto.data,
         photoMimeType: currentPhoto.mimeType,
-        accessToken: lineAccessToken, // アクセストークンを送信
+        accessToken: currentAccessToken, // アクセストークンを送信
         userId: lineUserId, // ユーザーIDも送信（参考用）
         timestamp: new Date().toISOString()
       };
