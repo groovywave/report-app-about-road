@@ -1,5 +1,6 @@
 // script.js - LINE Login channel対応版
 
+
 // ▼▼▼【重要】設定値を更新してください ▼▼▼
 const APP_SETTINGS = {
   MAX_RETRY_ATTEMPTS: 3,
