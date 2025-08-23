@@ -7,7 +7,8 @@ const APP_SETTINGS = {
   RETRY_DELAY: 1000,
   REQUEST_TIMEOUT: 30000,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
-  ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+  ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+  DETAILS_MAX_LENGTH: 100
 };
 // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
@@ -49,6 +50,7 @@ document.addEventListener('DOMContentLoaded', async function () {
       userIdInput: document.getElementById('userId'),
       detailsTextarea: document.getElementById('details'), // 詳細テキストエリア
       detailsRequiredNote: document.getElementById('details-required-note'), // 注釈用span
+      detailsOverlay: document.getElementById('details-overlay'), // 詳細ハイライト用オーバーレイ
       typeRadios: document.querySelectorAll('input[name="type"]'), // 異常の種類ラジオボタン（すべて）
 
       // カメラ関連
@@ -232,7 +234,22 @@ document.addEventListener('DOMContentLoaded', async function () {
       radio.addEventListener('change', handleTypeChange);
     });
 
-    // 初期状態のチェックも実行
+    // 詳細文字数ハイライト・注記
+    if (elements.detailsTextarea && elements.detailsOverlay) {
+      elements.detailsTextarea.addEventListener('input', () => {
+        updateDetailsOverlayAndNote();
+      });
+      elements.detailsTextarea.addEventListener('scroll', () => {
+        // スクロール同期（transformで追従させる）
+        const st = elements.detailsTextarea.scrollTop;
+        const sl = elements.detailsTextarea.scrollLeft;
+        elements.detailsOverlay.style.transform = `translate(${-sl}px, ${-st}px)`;
+      });
+      // 初期描画
+      updateDetailsOverlayAndNote();
+    }
+
+    // 初期状態のチェックも実行（必須表示含めて更新）
     handleTypeChange();
 
     // 写真プレビュー
@@ -261,12 +278,69 @@ document.addEventListener('DOMContentLoaded', async function () {
     if (elements.otherRadio && elements.otherRadio.checked) {
       // 「その他」が選択されている場合
       elements.detailsTextarea.required = true;
-      elements.detailsRequiredNote.textContent = '（必須入力）';
+      // 文字数注記を含めて更新
+      updateDetailsNote();
     } else {
       // 「その他」以外が選択されている場合
       elements.detailsTextarea.required = false;
-      elements.detailsRequiredNote.textContent = '';
+      // 文字数注記を含めて更新
+      updateDetailsNote();
     }
+  }
+
+  // 詳細のオーバーレイ更新と注記更新
+  function updateDetailsOverlayAndNote() {
+    const textarea = document.getElementById('details');
+    const overlay = document.getElementById('details-overlay');
+    if (!textarea || !overlay) return;
+
+    const limit = CONFIG.DETAILS_MAX_LENGTH ?? 100;
+    const chars = Array.from(textarea.value || '');
+    const count = chars.length;
+
+    // HTMLエスケープ
+    const esc = (s) => s
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\n/g, '<br>')
+      .replace(/ /g, '&nbsp;');
+
+    if (count <= limit) {
+      overlay.innerHTML = esc(chars.join(''));
+    } else {
+      const normal = chars.slice(0, limit).join('');
+      const over = chars.slice(limit).join('');
+      overlay.innerHTML = esc(normal) + '<span class="overflow">' + esc(over) + '</span>';
+    }
+
+    // スクロール位置を同期（入力時）
+    const st = textarea.scrollTop;
+    const sl = textarea.scrollLeft;
+    overlay.style.transform = `translate(${-sl}px, ${-st}px)`;
+
+    // ラベル注記の更新
+    updateDetailsNote(count > limit);
+  }
+
+  // ラベル注記の更新（必須と100文字注記の併記対応）
+  function updateDetailsNote(exceeded) {
+    const note = document.getElementById('details-required-note');
+    const otherRadio = document.getElementById('type-other');
+    if (!note) return;
+
+    const parts = [];
+    if (otherRadio && otherRadio.checked) parts.push('（必須入力）');
+    if (typeof exceeded === 'undefined') {
+      // exceededが未指定なら、現在の入力から判定
+      const len = Array.from((document.getElementById('details')?.value) || '').length;
+      const limit = CONFIG.DETAILS_MAX_LENGTH ?? 100;
+      if (len > limit) parts.push('（１００文字以内）');
+    } else if (exceeded) {
+      parts.push('（１００文字以内）');
+    }
+
+    note.textContent = parts.join('');
   }
 
 
@@ -592,6 +666,14 @@ document.addEventListener('DOMContentLoaded', async function () {
       }
     }
 
+    // 詳細の文字数上限チェック（入力がある場合）
+    const detailsAll = formData.get('details') || '';
+    const detailsLength = Array.from(detailsAll).length;
+    const limit = CONFIG.DETAILS_MAX_LENGTH ?? 100;
+    if (detailsLength > limit) {
+      return { isValid: false, message: '詳細は100文字以内で入力してください。' };
+    }
+
     const lat = parseFloat(formData.get('latitude'));
     const lng = parseFloat(formData.get('longitude'));
 
@@ -686,5 +768,3 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
   });
 });
-
-
