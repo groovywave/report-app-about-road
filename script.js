@@ -234,6 +234,19 @@ document.addEventListener('DOMContentLoaded', async function () {
       radio.addEventListener('change', handleTypeChange);
     });
 
+    // 詳細の入力を日本語換算（コードポイント）で上限制御
+    if (elements.detailsTextarea) {
+      const limit = CONFIG.DETAILS_MAX_LENGTH ?? 100;
+      // 基本的なブラウザ側の制限（UTF-16単位）も設定
+      elements.detailsTextarea.setAttribute('maxlength', String(limit));
+      elements.detailsTextarea.addEventListener('input', () => {
+        const chars = Array.from(elements.detailsTextarea.value || '');
+        if (chars.length > limit) {
+          elements.detailsTextarea.value = chars.slice(0, limit).join('');
+        }
+      });
+    }
+
     // 詳細文字数ハイライト・注記
     if (elements.detailsTextarea && elements.detailsOverlay) {
       elements.detailsTextarea.addEventListener('input', () => {
