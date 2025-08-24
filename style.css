@@ -441,12 +441,13 @@ textarea::placeholder {
 /* ===== 送信ボタン ===== */
 #btn-submit {
   width: 100%;
-  padding: 16px 24px;
+  padding: 18px 28px;
+  min-height: 56px;
   background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
   color: white;
   border: none;
   border-radius: 8px;
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -668,8 +669,9 @@ textarea::placeholder {
   }
   
   #btn-submit {
-    padding: 14px 20px;
-    font-size: 15px;
+    padding: 16px 24px;
+    min-height: 56px;
+    font-size: 16px;
   }
 }
 

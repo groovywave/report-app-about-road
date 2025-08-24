@@ -20,16 +20,22 @@ let lineUserId = null;
 let CONFIG = {};
 let elements = {};
 
-document.addEventListener('DOMContentLoaded', async function () {
+document.addEventListener('DOMContentLoaded', async function() {
   try {
-    // 1. Cloudflareから環境依存の設定値を取得
-    const response = await fetch('/api/config');
-    if (!response.ok) {
-      throw new Error('設定ファイルの読み込みに失敗しました。');
+    // 1. Cloudflareなどのエンドポイントから環境依存の設定値を取得（無ければデフォルトで続行）
+    let envConfig = {};
+    try {
+      const response = await fetch('/api/config', { cache: 'no-store' });
+      if (response.ok) {
+        envConfig = await response.json();
+      } else {
+        console.warn(`設定エンドポイントが見つかりませんでした: ${response.status} ${response.statusText} - デフォルト設定で起動します。`);
+      }
+    } catch (e) {
+      console.warn('設定エンドポイントの取得に失敗しました（オフライン/ローカル想定）: デフォルト設定で起動します。', e);
     }
-    const envConfig = await response.json();
 
-    // 2. 固定的な設定値とマージして、最終的なCONFIgオブジェクトを完成させる。
+    // 2. 固定的な設定値とマージして、最終的なCONFIGオブジェクトを完成させる。
     CONFIG = { ...APP_SETTINGS, ...envConfig };
 
     console.log('アプリケーション設定が完了しました。：', CONFIG);
@@ -41,6 +47,7 @@ document.addEventListener('DOMContentLoaded', async function () {
       latInput: document.getElementById('latitude'),
       lngInput: document.getElementById('longitude'),
       form: document.getElementById('report-form'),
+      btnSubmit: document.getElementById('btn-submit'),
       loader: document.getElementById('loader'),
       photoInput: document.getElementById('photo'),
       imagePreview: document.getElementById('image-preview'),
@@ -79,6 +86,9 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     // === フォーム機能の初期化 ===
     initializeFormFeatures(elements);
+
+    // 初期の送信ボタン状態を更新
+    updateSubmitButtonState();
   } catch (error) {
     console.error('初期化エラー：', error);
     showNotification(error.message, 'error');
@@ -160,6 +170,8 @@ document.addEventListener('DOMContentLoaded', async function () {
       elements.coordsDisplay.innerText = `緯度: ${center.lat.toFixed(6)} 経度: ${center.lng.toFixed(6)}`;
       elements.latInput.value = center.lat;
       elements.lngInput.value = center.lng;
+      // 位置が更新されたら送信ボタンの状態も更新
+      updateSubmitButtonState();
     }
 
     elements.map.on('move', updateCenterCoords);
@@ -168,10 +180,10 @@ document.addEventListener('DOMContentLoaded', async function () {
     // 現在位置の取得
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        function (pos) {
+        function(pos) {
           elements.map.setView([pos.coords.latitude, pos.coords.longitude], 18);
         },
-        function (error) {
+        function(error) {
           console.warn('位置情報の取得に失敗しました:', error);
           showNotification('位置情報の取得に失敗しました。手動で位置を調整してください。', 'warning');
         }
@@ -231,7 +243,10 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     // 「その他」選択時に詳細を必須にするためのイベントリスナー
     elements.typeRadios.forEach(radio => {
-      radio.addEventListener('change', handleTypeChange);
+      radio.addEventListener('change', () => {
+        handleTypeChange();
+        updateSubmitButtonState();
+      });
     });
 
     // 詳細の入力を日本語換算（コードポイント）で上限制御
@@ -244,6 +259,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         if (chars.length > limit) {
           elements.detailsTextarea.value = chars.slice(0, limit).join('');
         }
+        updateSubmitButtonState();
       });
     }
 
@@ -266,18 +282,22 @@ document.addEventListener('DOMContentLoaded', async function () {
     handleTypeChange();
 
     // 写真プレビュー
-    elements.photoInput.addEventListener('change', function () {
+    elements.photoInput.addEventListener('change', function() {
       handlePhotoInput(this, elements);
     });
 
     // フォーム送信
-    elements.form.addEventListener('submit', function (e) {
+    elements.form.addEventListener('submit', function(e) {
       e.preventDefault();
       if (!elements.loader.classList.contains('sending')) {
         const formData = new FormData(this);
         handleFormSubmission(formData, elements);
       }
     });
+
+    // フォーム全体の変化でもボタン状態を更新（保険）
+    elements.form.addEventListener('input', updateSubmitButtonState);
+    elements.form.addEventListener('change', updateSubmitButtonState);
   }
 
   // 「異常の種類」が変更されたときのハンドラ関数
@@ -384,6 +404,116 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     document.body.appendChild(notification);
     setTimeout(() => notification.remove(), 5000);
+  }
+
+  // 画像をビットマップ化してから再エンコード（JPEG）する共通関数
+  async function bitmapizeAndEncode(fileOrDataUrl, options = {}) {
+    const {
+      maxWidth = 1280,
+      maxHeight = 1280,
+      quality = 0.85,
+      mimeType = 'image/jpeg',
+      background = '#fff'
+    } = options;
+
+    // 入力をBlobに正規化
+    let srcBlob;
+    if (fileOrDataUrl instanceof Blob) {
+      srcBlob = fileOrDataUrl;
+    } else if (typeof fileOrDataUrl === 'string') {
+      // dataURLやHTTP URL想定（dataURLのみを主に想定）
+      const res = await fetch(fileOrDataUrl);
+      srcBlob = await res.blob();
+    } else {
+      throw new Error('bitmapizeAndEncode: 未対応の入力タイプです');
+    }
+
+    // デコードしてビットマップへ
+    let bmp, width, height;
+    try {
+      // createImageBitmapが使える場合はEXIFの向き適用に期待
+      // Safari等ではオプション未対応のためtry-catchでフォールバック
+      bmp = await createImageBitmap(srcBlob, { imageOrientation: 'from-image' });
+      width = bmp.width;
+      height = bmp.height;
+    } catch {
+      // フォールバック: Image要素 + ObjectURL
+      const url = URL.createObjectURL(srcBlob);
+      try {
+        const img = await new Promise((resolve, reject) => {
+          const i = new Image();
+          i.onload = () => resolve(i);
+          i.onerror = reject;
+          i.src = url;
+        });
+        width = img.naturalWidth || img.width;
+        height = img.naturalHeight || img.height;
+        // Canvasに描画してビットマップ化
+        const cvs = document.createElement('canvas');
+        cvs.width = width; cvs.height = height;
+        const ctx = cvs.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        // CanvasからImageBitmapへ（対応ブラウザのみ）
+        if (window.createImageBitmap) {
+          bmp = await createImageBitmap(cvs);
+        } else {
+          // 最低限、既にキャンバスにラスタライズ済みなのでこのまま扱う
+          bmp = cvs;
+        }
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    }
+
+    // サイズ調整（アスペクト比維持）
+    let targetW = width;
+    let targetH = height;
+    if (targetW > targetH) {
+      if (targetW > maxWidth) {
+        targetH = Math.round((maxWidth / targetW) * targetH);
+        targetW = maxWidth;
+      }
+    } else {
+      if (targetH > maxHeight) {
+        targetW = Math.round((maxHeight / targetH) * targetW);
+        targetH = maxHeight;
+      }
+    }
+
+    // 描画用キャンバス（OffscreenCanvasがあれば利用）
+    const hasOffscreen = typeof OffscreenCanvas !== 'undefined';
+    const cvs = hasOffscreen ? new OffscreenCanvas(targetW, targetH) : document.createElement('canvas');
+    if (!hasOffscreen) {
+      cvs.width = targetW; cvs.height = targetH;
+    }
+    const ctx = cvs.getContext('2d');
+
+    // 透明PNG/GIF対策で背景を塗る
+    ctx.clearRect(0, 0, targetW, targetH);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = background;
+    ctx.fillRect(0, 0, targetW, targetH);
+    ctx.drawImage(bmp, 0, 0, targetW, targetH);
+
+    // エンコード（JPEG）
+    if (cvs.convertToBlob) {
+      // OffscreenCanvas
+      const blob = await cvs.convertToBlob({ type: mimeType, quality });
+      return await blobToDataURL(blob);
+    } else {
+      // HTMLCanvasElement
+      const dataUrl = cvs.toDataURL(mimeType, quality);
+      return dataUrl;
+    }
+  }
+
+  function blobToDataURL(blob) {
+    return new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onload = () => resolve(fr.result);
+      fr.onerror = reject;
+      fr.readAsDataURL(blob);
+    });
   }
 
   // 写真データ更新（統合版）
@@ -529,6 +659,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+    // 既にビットマップだが、パイプライン統一のため再エンコード
     updatePhoto(dataUrl, 'image/jpeg', elements);
     stopCamera(elements);
     showNotification('写真を撮影しました。', 'success');
@@ -553,72 +684,17 @@ document.addEventListener('DOMContentLoaded', async function () {
         return;
       }
 
-      const reader = new FileReader();
-
-      reader.onload = (e) => {
-        // ★ 元のe.target.resultをImageオブジェクトに読み込ませる
-        const originalBase64 = e.target.result;
-        const img = new Image();
-
-        img.onload = () => {
-          // ★ 圧縮ロジック開始
-          const MAX_WIDTH = 1280; // 長辺の最大ピクセル数を設定（1280pxなら十分高画質）
-          const MAX_HEIGHT = 1280;
-          let width = img.width;
-          let height = img.height;
-
-          // アスペクト比を維持したままリサイズ
-          if (width > height) {
-            if (width > MAX_WIDTH) {
-              height *= MAX_WIDTH / width;
-              width = MAX_WIDTH;
-            }
-          } else {
-            if (height > MAX_HEIGHT) {
-              width *= MAX_HEIGHT / height;
-              height = MAX_HEIGHT;
-            }
-          }
-
-          // canvasを使ってリサイズ後の画像を描画
-          const canvas = document.createElement('canvas');
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, width, height);
-
-          // ★ canvasから圧縮された新しいBase64データを取得 (JPEG形式, 品質80%)
-          // PNGに透明色が含まれている場合を考慮し、背景を白で塗りつぶす
-          ctx.globalCompositeOperation = 'destination-over';
-          ctx.fillStyle = '#fff'; // 背景色を白に
-          ctx.fillRect(0, 0, width, height);
-
-          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.85); // 品質を少し上げて0.85に
-
-          // ★ 圧縮後のデータでUIを更新する
-          // MIMEタイプは 'image/jpeg' になる
+      // 必ずビットマップ化→再エンコード
+      bitmapizeAndEncode(file, { maxWidth: 1280, maxHeight: 1280, quality: 0.85, mimeType: 'image/jpeg', background: '#fff' })
+        .then((compressedBase64) => {
           updatePhoto(compressedBase64, 'image/jpeg', elements);
-
-          // (デバッグ用) 圧縮率を確認
-          console.log(`画像圧縮完了 - 元サイズ: ${Math.round(originalBase64.length / 1024)} KB, 圧縮後サイズ: ${Math.round(compressedBase64.length / 1024)} KB`);
-
-        };
-
-        img.onerror = () => {
-          showNotification('画像データの解析に失敗しました。', 'error');
+          console.log(`画像再エンコード完了（bitmap→jpeg）: ${Math.round(compressedBase64.length / 1024)} KB`);
+        })
+        .catch((err) => {
+          console.error(err);
+          showNotification('画像の再エンコードに失敗しました。', 'error');
           updatePhoto(null, null, elements);
-        };
-
-        // Imageオブジェクトのソースに、読み込んだBase64データを指定
-        img.src = originalBase64;
-      };
-
-      reader.onerror = () => {
-        showNotification('ファイルの読み込みに失敗しました。', 'error');
-        updatePhoto(null, null, elements);
-      };
-
-      reader.readAsDataURL(file);
+        });
     }
   }
 
@@ -772,6 +848,28 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     const formElements = elements.form.querySelectorAll('input, select, textarea, button');
     formElements.forEach(el => el.disabled = isSending);
+
+    // 送信状態変更後にもボタン表示テキストを適切に更新
+    if (!isSending) updateSubmitButtonState();
+  }
+
+  // 送信ボタンの活性/非活性とテキストを更新
+  function updateSubmitButtonState() {
+    if (!elements?.form || !elements?.btnSubmit) return;
+    // 送信中は一律で制御しない
+    if (elements.loader?.classList.contains('sending')) return;
+
+    const formData = new FormData(elements.form);
+    const selectedType = formData.get('type');
+    const isOther = selectedType === 'その他';
+    const detailsVal = (elements.detailsTextarea?.value || '').trim();
+
+    const canSubmit = selectedType && (!isOther || (isOther && detailsVal.length > 0));
+
+    elements.btnSubmit.disabled = !canSubmit;
+    elements.btnSubmit.textContent = canSubmit
+      ? 'この内容で通報する'
+      : '不具合の種類を選択してください';
   }
 
   // ページ離脱時のクリーンアップ
