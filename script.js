@@ -557,6 +557,11 @@ document.addEventListener('DOMContentLoaded', async function() {
       }
     } catch (error) {
       console.error('権限確認エラー:', error);
+      // iOS Safari/一部環境では Permission API が未対応で TypeError になる
+      if (error && error.name === 'TypeError') {
+        updatePermissionStatus(elements, 'unknown', 'Permission API未サポート - 直接権限要求を行ってください');
+        return 'unknown';
+      }
       updatePermissionStatus(elements, 'error', `権限確認エラー: ${error.message}`);
       return 'error';
     }
@@ -582,7 +587,11 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // カメラボタンの表示制御
     if (elements.startCameraButton) {
-      elements.startCameraButton.style.display = state === 'granted' ? 'block' : 'none';
+      // モバイルではPermission APIが未対応/不安定なため、
+      // 'granted' 以外でも 'prompt' や 'unknown' の場合はボタンを表示して
+      // ユーザー操作で getUserMedia を発火できるようにする。
+      const showForStates = new Set(['granted', 'prompt', 'unknown']);
+      elements.startCameraButton.style.display = showForStates.has(state) ? 'block' : 'none';
     }
   }
 
@@ -595,7 +604,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 権限要求中...';
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      const constraints = { video: { facingMode: { ideal: 'environment' } }, audio: false };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       stream.getTracks().forEach(track => track.stop());
 
       updatePermissionStatus(elements, 'granted', 'カメラが使えます！');
@@ -604,7 +614,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     } catch (error) {
       const errorMessages = {
         NotAllowedError: 'カメラ利用不可',
-        NotFoundError: 'カメラデ利用不可',
+        NotFoundError: 'カメラで利用不可',
         NotSupportedError: 'カメラ利用不可'
       };
       const message = errorMessages[error.name] || `エラー: ${error.message}`;
@@ -618,7 +628,8 @@ document.addEventListener('DOMContentLoaded', async function() {
   }
 
   function startCamera(elements) {
-    navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+    const constraints = { video: { facingMode: { ideal: 'environment' } }, audio: false };
+    navigator.mediaDevices.getUserMedia(constraints)
       .then(stream => {
         videoStream = stream;
         elements.videoElement.srcObject = stream;
