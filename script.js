@@ -14,7 +14,6 @@ const APP_SETTINGS = {
 
 // グローバル変数
 let currentPhoto = { data: null, mimeType: null };
-let videoStream = null;
 let lineAccessToken = null;
 let lineUserId = null;
 let CONFIG = {};
@@ -80,9 +79,6 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // === 地図の初期化 ===
     initializeMap(elements);
-
-    // === カメラ機能の初期化 ===
-    initializeCameraFeatures(elements);
 
     // === フォーム機能の初期化 ===
     initializeFormFeatures(elements);
