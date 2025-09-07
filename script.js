@@ -814,8 +814,8 @@ document.addEventListener('DOMContentLoaded', async function() {
       const response = await fetch(CONFIG.GAS_WEB_APP_URL, {
         method: 'POST',
         body: JSON.stringify(payload),
-        headers: { 'Content-Type': 'text/plain' },
-        mode: 'cors',
+        // headers: { 'Content-Type': 'text/plain' },
+        // mode: 'cors',
         signal: controller.signal
       });
 
