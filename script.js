@@ -14,6 +14,7 @@ const APP_SETTINGS = {
 
 // グローバル変数
 let currentPhoto = { data: null, mimeType: null };
+let videoStream = null;
 let lineAccessToken = null;
 let lineUserId = null;
 let CONFIG = {};
@@ -58,7 +59,20 @@ document.addEventListener('DOMContentLoaded', async function() {
       detailsRequiredNote: document.getElementById('details-required-note'), // 注釈用span
       detailsOverlay: document.getElementById('details-overlay'), // 詳細ハイライト用オーバーレイ
       typeRadios: document.querySelectorAll('input[name="type"]'), // 異常の種類ラジオボタン（すべて）
-      // カメラ関連は削除
+
+      // カメラ関連
+      requestPermissionButton: document.getElementById('request-camera-permission'),
+      permissionStatus: document.getElementById('permission-status'),
+      startCameraButton: document.getElementById('start-camera-btn'),
+      cameraModal: document.getElementById('camera-modal'),
+      videoWrapper: document.getElementById('video-wrapper'),
+      videoElement: document.getElementById('camera-stream'),
+      cameraErrorView: document.getElementById('camera-error-view'),
+      cameraErrorText: document.getElementById('camera-error-text'),
+      retryCameraButton: document.getElementById('retry-camera-btn'),
+      canvasElement: document.getElementById('camera-canvas'),
+      captureButton: document.getElementById('capture-btn'),
+      cancelButton: document.getElementById('cancel-camera-btn')
     };
 
     // === LIFF初期化 ===
@@ -66,6 +80,9 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // === 地図の初期化 ===
     initializeMap(elements);
+
+    // === カメラ機能の初期化 ===
+    initializeCameraFeatures(elements);
 
     // === フォーム機能の初期化 ===
     initializeFormFeatures(elements);
@@ -174,7 +191,52 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
   }
 
-  // カメラ機能は削除
+  // === カメラ機能初期化 ===
+  function initializeCameraFeatures(elements) {
+    // 初期状態ではカメラボタンを非表示
+    if (elements.startCameraButton) {
+      elements.startCameraButton.style.display = 'none';
+    }
+
+    // 権限確認
+    setTimeout(() => checkCameraPermission(elements), 100);
+
+    // イベントリスナー設定
+    if (elements.requestPermissionButton) {
+      elements.requestPermissionButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        requestCameraPermission(elements);
+      });
+    }
+
+    if (elements.startCameraButton) {
+      elements.startCameraButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        startCamera(elements);
+      });
+    }
+
+    if (elements.retryCameraButton) {
+      elements.retryCameraButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        startCamera(elements);
+      });
+    }
+
+    if (elements.cancelButton) {
+      elements.cancelButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        stopCamera(elements)
+      });
+    }
+
+    if (elements.captureButton) {
+      elements.captureButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        capturePhoto(elements)
+      });
+    }
+  }
 
   // === フォーム機能初期化 ===
   function initializeFormFeatures(elements) {
@@ -469,7 +531,150 @@ document.addEventListener('DOMContentLoaded', async function() {
     elements.photoInput.value = '';
   }
 
-  // カメラ関連関数は削除
+  // === カメラ関連関数（統合・簡略化版） ===
+
+  async function checkCameraPermission(elements) {
+    updatePermissionStatus(elements, 'checking', '権限状態を確認中...');
+
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        updatePermissionStatus(elements, 'error', 'カメラAPIがサポートされていません');
+        return 'unsupported';
+      }
+
+      if (navigator.permissions) {
+        const permission = await navigator.permissions.query({ name: 'camera' });
+        const messages = {
+          granted: 'カメラ利用可',
+          denied: 'カメラ利用不可',
+          prompt: 'カメラ未設定'
+        };
+        updatePermissionStatus(elements, permission.state, messages[permission.state] || '権限状態が不明です');
+        return permission.state;
+      } else {
+        updatePermissionStatus(elements, 'prompt', 'Permission API未サポート - 直接権限要求を行ってください');
+        return 'unknown';
+      }
+    } catch (error) {
+      console.error('権限確認エラー:', error);
+      // iOS Safari/一部環境では Permission API が未対応で TypeError になる
+      if (error && error.name === 'TypeError') {
+        updatePermissionStatus(elements, 'unknown', 'Permission API未サポート - 直接権限要求を行ってください');
+        return 'unknown';
+      }
+      updatePermissionStatus(elements, 'error', `権限確認エラー: ${error.message}`);
+      return 'error';
+    }
+  }
+
+  function updatePermissionStatus(elements, state, message) {
+    if (!elements.permissionStatus) return;
+
+    const icons = {
+      granted: '🟢', denied: '🔴', prompt: '🟡',
+      checking: '<i class="fas fa-spinner"></i>', error: '🔴'
+    };
+    const prefixes = {
+      granted: '✅', denied: '❌', prompt: '⏳',
+      checking: '🔍', error: '⚠️'
+    };
+
+    elements.permissionStatus.className = `permission-status ${state}`;
+    elements.permissionStatus.innerHTML = `
+      <span class="permission-status-icon">${icons[state] || '❓'}</span>
+      <span>${prefixes[state] || '❓'} ${message}</span>
+    `;
+
+    // カメラボタンの表示制御
+    if (elements.startCameraButton) {
+      // モバイルではPermission APIが未対応/不安定なため、
+      // 'granted' 以外でも 'prompt' や 'unknown' の場合はボタンを表示して
+      // ユーザー操作で getUserMedia を発火できるようにする。
+      const showForStates = new Set(['granted', 'prompt', 'unknown']);
+      elements.startCameraButton.style.display = showForStates.has(state) ? 'block' : 'none';
+    }
+  }
+
+  async function requestCameraPermission(elements) {
+    const button = elements.requestPermissionButton;
+    if (!button) return;
+
+    button.disabled = true;
+    const originalHTML = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 権限要求中...';
+
+    try {
+      const constraints = { video: { facingMode: { ideal: 'environment' } }, audio: false };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      stream.getTracks().forEach(track => track.stop());
+
+      updatePermissionStatus(elements, 'granted', 'カメラが使えます！');
+      showNotification('カメラ利用可', 'success');
+      return 'granted';
+    } catch (error) {
+      const errorMessages = {
+        NotAllowedError: 'カメラ利用不可',
+        NotFoundError: 'カメラで利用不可',
+        NotSupportedError: 'カメラ利用不可'
+      };
+      const message = errorMessages[error.name] || `エラー: ${error.message}`;
+      updatePermissionStatus(elements, 'denied', message);
+      showNotification(message, 'error');
+      return 'denied';
+    } finally {
+      button.disabled = false;
+      button.innerHTML = originalHTML;
+    }
+  }
+
+  function startCamera(elements) {
+    const constraints = { video: { facingMode: { ideal: 'environment' } }, audio: false };
+    navigator.mediaDevices.getUserMedia(constraints)
+      .then(stream => {
+        videoStream = stream;
+        elements.videoElement.srcObject = stream;
+        elements.videoWrapper.classList.remove('hidden');
+        elements.cameraErrorView.classList.add('hidden');
+        elements.captureButton.classList.remove('hidden');
+        elements.cameraModal.classList.remove('hidden');
+        showNotification('カメラが起動しました', 'success');
+      })
+      .catch(error => {
+        console.error('カメラ起動失敗:', error);
+        elements.cameraErrorText.textContent = `カメラの起動に失敗しました: ${error.message}`;
+        elements.videoWrapper.classList.add('hidden');
+        elements.cameraErrorView.classList.remove('hidden');
+        elements.captureButton.classList.add('hidden');
+        elements.cameraModal.classList.remove('hidden');
+        showNotification('カメラの起動に失敗しました', 'error');
+      });
+  }
+
+  function stopCamera(elements) {
+    if (videoStream) {
+      videoStream.getTracks().forEach(track => track.stop());
+      videoStream = null;
+    }
+    elements.videoElement.srcObject = null;
+    elements.cameraModal.classList.add('hidden');
+  }
+
+  function capturePhoto(elements) {
+    const canvas = elements.canvasElement;
+    const video = elements.videoElement;
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const context = canvas.getContext('2d');
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+    // 既にビットマップだが、パイプライン統一のため再エンコード
+    updatePhoto(dataUrl, 'image/jpeg', elements);
+    stopCamera(elements);
+    showNotification('写真を撮影しました。', 'success');
+  }
 
   // === 写真入力処理（画像圧縮機能付き） ===
   function handlePhotoInput(input, elements) {
@@ -678,5 +883,11 @@ document.addEventListener('DOMContentLoaded', async function() {
       : '不具合の種類を選択してください';
   }
 
-  // ページ離脱時のクリーンアップ（カメラ機能削除のため不要）
+  // ページ離脱時のクリーンアップ
+  window.addEventListener('beforeunload', () => {
+    if (videoStream) {
+      videoStream.getTracks().forEach(track => track.stop());
+    }
+  });
 });
+
